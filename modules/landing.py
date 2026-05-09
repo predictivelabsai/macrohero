@@ -399,6 +399,51 @@ def _how():
     )
 
 
+def _product_tour():
+    return Section(
+        Div(
+            Div(
+                _eyebrow("Product tour"),
+                _heading(2, "See it in motion.", cls="mt-3 max-w-3xl mb-2"),
+                P(
+                    "A 20-second walk through the platform — macro chat, live backtesting, "
+                    "currency pairs, news history, and the dark-themed trading sidebar. "
+                    "Built for traders who think in macro.",
+                    cls="mt-2 text-ink-muted text-base max-w-2xl leading-relaxed mb-6",
+                ),
+                cls="mb-6",
+            ),
+            A(
+                Img(
+                    src="/static/demo_video.gif",
+                    alt="MacroHero product tour — chat, backtesting, market analysis",
+                    loading="lazy",
+                    cls="block w-full h-auto rounded-2xl border border-line shadow-[0_8px_40px_rgba(0,0,0,0.06)]",
+                ),
+                href="/login",
+                cls="block rounded-2xl overflow-hidden hover:opacity-95 transition-opacity",
+                title="Sign in to MacroHero",
+            ),
+            Div(
+                A(
+                    Span("Sign in"), Span("→", cls="ml-1"),
+                    href="/login",
+                    cls="inline-flex items-center gap-2 text-sm text-accent hover:text-ink",
+                ),
+                Span("·", cls="text-ink-dim mx-3"),
+                A(
+                    Span("Book a demo"), Span("→", cls="ml-1"),
+                    href="mailto:info@macrohero.com?subject=MacroHero Demo Request",
+                    cls="inline-flex items-center gap-2 text-sm text-accent hover:text-ink",
+                ),
+                cls="mt-5 flex items-center flex-wrap gap-y-2",
+            ),
+            cls="max-w-7xl mx-auto px-5 md:px-6 py-14 md:py-20 border-t border-line",
+        ),
+        id="tour",
+    )
+
+
 STARTERS = [
     ("Give me FX strategies for a Hormuz deal scenario", "globe"),
     ("Backtest momentum on EUR/USD over last year", "bar-chart-2"),
@@ -557,6 +602,7 @@ def landing_page():
             _hero(),
             _features_section(),
             _how(),
+            _product_tour(),
             _starter_cards_section(),
             _team_section(),
             _cta(),
