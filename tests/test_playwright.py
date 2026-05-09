@@ -24,9 +24,9 @@ def test_homepage():
         # Check branding
         assert page.locator("text=MacroHero").first.is_visible(), "MacroHero branding not found"
 
-        # Check sidebar categories
-        assert page.locator("text=Event Categories").is_visible(), "Event Categories section not found"
-        assert page.locator("text=Central Bank").first.is_visible(), "Central Bank category not found"
+        # Check sidebar sections
+        assert page.locator("text=Trading").first.is_visible(), "Trading section not found"
+        assert page.locator(".sidebar-expander", has_text="Categories").is_visible(), "Categories expander not found"
 
         # Check starter cards
         assert page.locator(".starter-card").count() >= 4, "Not enough starter cards"
