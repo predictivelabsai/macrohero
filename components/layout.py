@@ -5,24 +5,22 @@ from monsterui.all import *
 def NavBar_(user=None):
     if user:
         auth_section = DivLAligned(
-            Span(user.get("name", ""), cls="text-sm"),
-            A("Logout", href="/auth/logout", cls="uk-button uk-button-default uk-button-small"),
-            cls="gap-2",
+            Span(user.get("name", ""), cls="text-sm", style="color:#e2e8f0;"),
+            A("Logout", href="/auth/logout", style="color:#94a3b8; font-size:0.75rem; text-decoration:none;"),
+            cls="gap-3",
         )
     else:
         auth_section = DivLAligned(
-            A("Login", href="/login", cls="uk-button uk-button-default uk-button-small"),
-            A("Register", href="/register", cls="uk-button uk-button-primary uk-button-small"),
-            cls="gap-2",
+            A("Login", href="/login", style="color:#e2e8f0; font-size:0.8rem; text-decoration:none;"),
+            A("Register", href="/register",
+              style="background:#3b82f6; color:white; font-size:0.75rem; padding:4px 14px; border-radius:20px; text-decoration:none;"),
+            cls="gap-3",
         )
 
     return Div(
         A(DivLAligned(
-            UkIcon("trending-up", height=22),
-            Div(
-                Span("MacroHero", cls="text-lg font-bold"),
-                Span("beta", style="font-size:0.5rem; color:#9ca3af; vertical-align:super; margin-left:2px;"),
-            ),
+            UkIcon("trending-up", height=18, style="color:#3b82f6;"),
+            Span("MacroHero", style="font-size:1rem; font-weight:700; color:#f8fafc;"),
             cls="gap-2",
         ), href="/", cls="no-underline"),
         DivLAligned(auth_section, cls="gap-3"),

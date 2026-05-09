@@ -25,21 +25,23 @@ app, rt = fast_app(
         sse_script,
         Style("""
             html, body { overflow-x: hidden; max-width: 100vw; }
-            .app-layout { display: flex; gap: 0; height: calc(100vh - 60px); overflow: hidden; }
-            .left-pane { width: 240px; min-width: 240px; overflow-y: auto; padding: 12px; border-right: 1px solid #e5e7eb; }
+            .app-layout { display: flex; gap: 0; height: calc(100vh - 48px); overflow: hidden; }
+            .left-pane { width: 240px; min-width: 240px; overflow-y: auto; padding: 0; background: #0f172a; display: flex; flex-direction: column; }
             .center-pane { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-            .right-pane { width: 380px; min-width: 380px; overflow-y: auto; padding: 12px; border-left: 1px solid #e5e7eb; }
+            .right-pane { width: 320px; min-width: 320px; overflow-y: auto; padding: 12px; background: #f8fafc; border-left: 1px solid #e5e7eb; }
 
             .feed-area { flex: 1; overflow-y: auto; padding: 16px; }
             .chat-input-area { padding: 12px 16px; border-top: 1px solid #e5e7eb; }
+            .chat-input-area .uk-input { border-radius: 24px; padding-left: 16px; }
+            .chat-input-area .uk-input:focus { box-shadow: 0 0 0 2px rgba(59,130,246,0.3); border-color: #3b82f6; }
 
             #chat-messages { overflow-y: auto; padding: 0 16px; }
             #chat-messages:empty { display: none; }
 
-            .sidebar-topic { cursor: pointer; padding: 8px 10px; border-radius: 8px; border-left: 3px solid transparent;
-                             transition: background 0.15s, border-color 0.15s; margin-bottom: 4px; }
-            .sidebar-topic:hover { background: #f3f4f6; }
-            .sidebar-topic.active { background: #eff6ff; border-left-color: #3b82f6; }
+            .sidebar-topic { cursor: pointer; padding: 6px 12px; border-radius: 6px; border-left: none;
+                             transition: background 0.15s; margin-bottom: 2px; color: #e2e8f0; }
+            .sidebar-topic:hover { background: rgba(255,255,255,0.06); color: #f8fafc; }
+            .sidebar-topic.active { background: #1e293b; color: #f8fafc; }
 
             .chat-user { background: #eff6ff; border-radius: 12px; padding: 10px 16px; margin: 6px 0; max-width: 80%; margin-left: auto; }
             .chat-assistant { background: #f8f9fa; border-radius: 12px; padding: 12px 16px; margin: 6px 0; max-width: 90%; }
@@ -62,28 +64,45 @@ app, rt = fast_app(
             .thinking-dot:nth-child(3) { animation-delay: 0.4s; }
             @keyframes pulse { 0%,80%,100% { opacity:0.3; transform:scale(0.8); } 40% { opacity:1; transform:scale(1.2); } }
 
-            .app-nav { display: flex; align-items: center; justify-content: space-between; padding: 10px 20px; border-bottom: 1px solid #e5e7eb; height: 56px; }
+            .app-nav { display: flex; align-items: center; justify-content: space-between; padding: 8px 20px; background: #0f172a; height: 48px; }
 
-            .sidebar-section { margin-bottom: 16px; }
-            .sidebar-section-title { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #9ca3af; margin-bottom: 6px; padding-left: 10px; }
+            .sidebar-section { margin-bottom: 4px; padding: 0 8px; }
+            .sidebar-section-title { font-size: 0.65rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; margin-bottom: 4px; padding-left: 12px; padding-top: 8px; }
+
+            .sidebar-logo { padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+            .sidebar-footer { padding: 8px 16px; border-top: 1px solid rgba(255,255,255,0.06); margin-top: auto; }
+
+            .sidebar-shortcut { display: block; padding: 4px 12px 4px 28px; font-size: 0.72rem; color: #94a3b8; cursor: pointer;
+                                transition: background 0.15s, color 0.15s; border-radius: 4px; text-decoration: none; margin-bottom: 1px; }
+            .sidebar-shortcut:hover { background: rgba(255,255,255,0.06); color: #e2e8f0; }
+
+            .sidebar-expander { display: flex; align-items: center; justify-content: space-between; padding: 6px 12px;
+                                cursor: pointer; color: #64748b; font-size: 0.65rem; font-weight: 600; text-transform: uppercase;
+                                letter-spacing: 0.05em; user-select: none; }
+            .sidebar-expander:hover { color: #94a3b8; }
+            .sidebar-expander .chevron { transition: transform 0.2s; }
+            .sidebar-expander .chevron.collapsed { transform: rotate(-90deg); }
+
+            .greeting-text { font-size: 1.5rem; font-weight: 700; color: #1e293b; margin-bottom: 4px; }
+            .greeting-sub { font-size: 0.9rem; color: #64748b; margin-bottom: 8px; }
 
             .starter-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
-            .starter-card { cursor: pointer; padding: 10px 12px; border: 1px solid #e5e7eb; border-radius: 10px;
-                            font-size: 0.8rem; transition: background 0.15s, border-color 0.15s; }
-            .starter-card:hover { background: #eff6ff; border-color: #3b82f6; }
+            .starter-card { cursor: pointer; padding: 10px 12px; border: 1px solid #e5e7eb; border-radius: 12px;
+                            font-size: 0.8rem; transition: all 0.15s; }
+            .starter-card:hover { background: #eff6ff; border-color: #3b82f6; box-shadow: 0 2px 8px rgba(59,130,246,0.1); }
 
             .mobile-tabs { display: none; }
             @media (max-width: 768px) {
-                .left-pane { display: none; position: fixed; top: 56px; left: 0; bottom: 0; z-index: 50; background: white; width: 85vw; box-shadow: 2px 0 12px rgba(0,0,0,0.15); }
-                .left-pane.mobile-open { display: block; }
-                .right-pane { display: none; position: fixed; top: 56px; right: 0; bottom: 0; z-index: 50; background: white; width: 85vw; box-shadow: -2px 0 12px rgba(0,0,0,0.15); }
+                .left-pane { display: none; position: fixed; top: 48px; left: 0; bottom: 0; z-index: 50; background: #0f172a; width: 85vw; box-shadow: 2px 0 12px rgba(0,0,0,0.3); }
+                .left-pane.mobile-open { display: flex; flex-direction: column; }
+                .right-pane { display: none; position: fixed; top: 48px; right: 0; bottom: 0; z-index: 50; background: #f8fafc; width: 85vw; box-shadow: -2px 0 12px rgba(0,0,0,0.15); }
                 .right-pane.mobile-open { display: block; }
                 .mobile-tabs { display: flex; justify-content: space-around; border-bottom: 1px solid #e5e7eb; padding: 6px 0; }
                 .mobile-tabs button { background: none; border: none; font-size: 0.75rem; padding: 4px 12px; cursor: pointer; color: #6b7280; }
                 .mobile-tabs button:hover { color: #1e40af; }
                 .mobile-overlay { display: none; position: fixed; inset: 0; z-index: 40; background: rgba(0,0,0,0.3); }
                 .mobile-overlay.active { display: block; }
-                .app-layout { height: calc(100vh - 56px); }
+                .app-layout { height: calc(100vh - 48px); }
                 .starter-grid { grid-template-columns: 1fr; }
             }
         """),
@@ -158,14 +177,16 @@ def _chat_history_items(active_session_id: str) -> list:
         is_active = str(s["id"]) == active_session_id
         ts = s["created_at"].strftime("%H:%M") if hasattr(s["created_at"], "strftime") else ""
         title = s["title"][:22] + ("..." if len(s["title"]) > 22 else "")
+        active_style = "background:rgba(59,130,246,0.15);" if is_active else ""
         items.append(
             A(
                 DivFullySpaced(
-                    DivLAligned(UkIcon("message-circle", height=10), Span(title, cls="text-xs"), cls="gap-1"),
-                    Span(ts, style="font-size:0.55rem; color:#9ca3af;"),
+                    DivLAligned(UkIcon("message-circle", height=10, style="color:#64748b;"), Span(title, style="color:#cbd5e1; font-size:0.72rem;"), cls="gap-1"),
+                    Span(ts, style="font-size:0.55rem; color:#64748b;"),
                 ),
                 href=f"/session/{s['id']}",
-                cls="no-underline block py-1 px-2 rounded text-xs" + (" bg-primary/10" if is_active else " hover:bg-muted/50"),
+                cls="no-underline block",
+                style=f"padding:4px 8px; border-radius:4px; {active_style}",
             )
         )
     return items
@@ -175,16 +196,15 @@ def _sidebar_category(cat: dict, active: bool = False):
     count = cat.get("article_count", 0)
     return A(
         DivLAligned(
-            UkIcon(cat["icon"], height=18),
+            UkIcon(cat["icon"], height=14, style=f"color:{cat['color']};"),
             Div(
-                Span(cat["name"], cls="text-sm font-medium"),
-                Span(f" ({count})", cls="text-xs text-muted"),
+                Span(cat["name"], style="font-size:0.8rem; color:#e2e8f0;"),
+                Span(f" ({count})", style="font-size:0.65rem; color:#64748b;"),
             ),
             cls="gap-2",
         ),
         href=f"/category/{cat['slug']}",
         cls="sidebar-topic no-underline" + (" active" if active else ""),
-        style=f"border-left-color: {cat['color']};" if active else "",
     )
 
 
@@ -209,24 +229,59 @@ def _starter_cards(session_id: str):
     return Div(*cards, cls="starter-grid")
 
 
+def _greeting_message():
+    from datetime import datetime
+    hour = datetime.now().hour
+    if hour < 12:
+        greeting = "Good morning"
+    elif hour < 17:
+        greeting = "Good afternoon"
+    else:
+        greeting = "Good evening"
+    return greeting
+
+
+def _shortcut_item(label: str, command: str):
+    return A(
+        label,
+        href="#",
+        cls="sidebar-shortcut",
+        onclick=f"var inp=document.getElementById('chat-input'); inp.value={repr(command)}; inp.disabled=false; inp.form.requestSubmit(); return false;",
+    )
+
+
+def _expander_section(title: str, section_id: str, items: list, collapsed: bool = True):
+    display = "none" if collapsed else "block"
+    chevron_cls = "chevron collapsed" if collapsed else "chevron"
+    return Div(
+        Div(
+            Span(title),
+            UkIcon("chevron-down", height=10, cls=chevron_cls, id=f"{section_id}-chevron"),
+            cls="sidebar-expander",
+            onclick=f"var el=document.getElementById('{section_id}-items'); var ch=document.getElementById('{section_id}-chevron'); if(el.style.display==='none'){{el.style.display='block';ch.classList.remove('collapsed');}}else{{el.style.display='none';ch.classList.add('collapsed');}}",
+        ),
+        Div(*items, id=f"{section_id}-items", style=f"display:{display};"),
+    )
+
+
 def _upcoming_events_widget():
     events = _get_upcoming_events()
     if not events:
-        return P("No upcoming events.", cls="text-xs text-muted px-2")
+        return P("No upcoming events.", style="font-size:0.72rem; color:#64748b; padding:4px 12px;")
     items = []
     for ev in events[:6]:
         date_str = ev.get("date", "")
         items.append(
             Div(
                 DivFullySpaced(
-                    Span(ev.get("name", ""), cls="text-xs font-medium", style="line-height:1.2;"),
-                    Span(ev.get("country", ""), cls="text-xs text-muted"),
+                    Span(ev.get("name", ""), style="font-size:0.72rem; color:#e2e8f0; line-height:1.2; font-weight:500;"),
+                    Span(ev.get("country", ""), style="font-size:0.65rem; color:#94a3b8;"),
                 ),
                 DivFullySpaced(
-                    Span(date_str, cls="text-xs text-muted"),
-                    Span(ev.get("impact", ""), cls="text-xs", style=f"color:{'#ef4444' if ev.get('impact')=='High' else '#f59e0b' if ev.get('impact')=='Medium' else '#6b7280'};font-weight:600;"),
+                    Span(date_str, style="font-size:0.65rem; color:#94a3b8;"),
+                    Span(ev.get("impact", ""), style=f"font-size:0.65rem; font-weight:600; color:{'#ef4444' if ev.get('impact')=='High' else '#f59e0b' if ev.get('impact')=='Medium' else '#64748b'};"),
                 ),
-                cls="py-1 px-2", style="border-bottom:1px solid #f3f4f6;",
+                style="padding:4px 12px; border-bottom:1px solid rgba(255,255,255,0.06);",
             )
         )
     return Div(*items, id="upcoming-events",
@@ -698,13 +753,10 @@ def _app_shell(session: dict, active_category: str = None, user: dict = None):
     if not messages:
         msg_bubbles.append(
             Div(
-                Div(
-                    P("Welcome to MacroHero!", cls="font-semibold text-sm"),
-                    P("I'm your macro-economic market analyst. Ask me about central bank decisions, FX movements, trade policy, or any market-moving event. I can search the web and analyze live currency data.", cls="text-sm text-muted mt-1"),
-                    _starter_cards(session_id),
-                    cls="p-3",
-                ),
-                cls="chat-assistant",
+                P(_greeting_message(), cls="greeting-text"),
+                P("I'm your macro-economic market analyst. Ask about FX movements, central bank decisions, trade policy, or backtest a strategy.", cls="greeting-sub"),
+                _starter_cards(session_id),
+                style="padding: 16px;",
             )
         )
 
@@ -712,7 +764,7 @@ def _app_shell(session: dict, active_category: str = None, user: dict = None):
         Title("MacroHero"),
         NavBar_(user),
         Div(
-            Button(UkIcon("menu", height=14), " Categories", onclick="togglePane('left')", cls="text-xs"),
+            Button(UkIcon("menu", height=14), " Menu", onclick="togglePane('left')", cls="text-xs"),
             Button(UkIcon("message-circle", height=14), " Chat", cls="text-xs font-semibold"),
             Button(UkIcon("rss", height=14), " Live Feed", onclick="togglePane('right')", cls="text-xs"),
             cls="mobile-tabs",
@@ -741,93 +793,100 @@ def _app_shell(session: dict, active_category: str = None, user: dict = None):
         Div(
             # LEFT PANE
             Div(
-                # New Chat
+                # Logo
                 Div(
-                    DivFullySpaced(
-                        A(
-                            DivLAligned(UkIcon("plus", height=14), Span("New Chat", cls="text-xs font-medium"), cls="gap-1"),
-                            href="/", cls="sidebar-topic no-underline", style="border: 1px dashed #d1d5db; border-left: none; flex:1;",
-                        ),
-                        Button(UkIcon("trash-2", height=12), cls="uk-button uk-button-default uk-button-small",
-                               style="padding:2px 6px;", title="Clear history",
-                               hx_post="/api/clear-history", hx_target="body", hx_confirm="Clear all chat history?"),
-                        cls="gap-2 mb-1",
+                    A(DivLAligned(
+                        UkIcon("trending-up", height=16, style="color:#3b82f6;"),
+                        Span("MacroHero", style="font-size:0.9rem; font-weight:700; color:#f8fafc;"),
+                        cls="gap-2",
+                    ), href="/", cls="no-underline"),
+                    cls="sidebar-logo",
+                ),
+                # Home + Threads
+                Div(
+                    A(
+                        DivLAligned(UkIcon("home", height=14, style="color:#94a3b8;"), Span("Home", style="font-size:0.8rem;"), cls="gap-2"),
+                        href="/", cls="sidebar-topic no-underline",
                     ),
-                    *_chat_history_items(session_id),
+                    _expander_section("Threads", "threads", [
+                        DivFullySpaced(
+                            A(
+                                DivLAligned(UkIcon("plus", height=10, style="color:#64748b;"), Span("New Chat", style="font-size:0.7rem; color:#94a3b8;"), cls="gap-1"),
+                                href="/", cls="no-underline", style="padding:2px 8px;",
+                            ),
+                            Button(UkIcon("trash-2", height=10, style="color:#64748b;"),
+                                   style="background:none; border:none; padding:2px 4px; cursor:pointer;", title="Clear history",
+                                   hx_post="/api/clear-history", hx_target="body", hx_confirm="Clear all chat history?"),
+                            cls="gap-1",
+                            style="padding:0 4px; margin-bottom:4px;",
+                        ),
+                        *_chat_history_items(session_id),
+                    ], collapsed=False),
                     cls="sidebar-section",
                 ),
                 # Trading
                 Div(
                     Div("Trading", cls="sidebar-section-title"),
                     A(
-                        DivLAligned(UkIcon("zap", height=16), Span("Market Movers", cls="text-sm"), cls="gap-2"),
+                        DivLAligned(UkIcon("zap", height=14, style="color:#f59e0b;"), Span("Market Movers", style="font-size:0.8rem;"), cls="gap-2"),
                         href="#", cls="sidebar-topic no-underline",
                         onclick="var inp=document.getElementById('chat-input'); inp.value='Show me top market movers'; inp.disabled=false; inp.form.requestSubmit(); return false;",
                     ),
                     A(
-                        DivLAligned(UkIcon("bar-chart-2", height=16), Span("Currency Pairs", cls="text-sm"), cls="gap-2"),
+                        DivLAligned(UkIcon("bar-chart-2", height=14, style="color:#3b82f6;"), Span("Currency Pairs", style="font-size:0.8rem;"), cls="gap-2"),
                         href="/view/pairs", hx_get="/view/pairs", hx_target="#center-content", hx_swap="innerHTML",
                         cls="sidebar-topic no-underline",
                     ),
                     A(
-                        DivLAligned(UkIcon("activity", height=16), Span("Backtest Strategy", cls="text-sm"), cls="gap-2"),
-                        href="#", cls="sidebar-topic no-underline",
-                        onclick="var inp=document.getElementById('chat-input'); inp.value='Backtest momentum on EUR/USD over last year'; inp.disabled=false; inp.form.requestSubmit(); return false;",
-                    ),
-                    A(
-                        DivLAligned(UkIcon("trending-up", height=16), Span("Treasury vs FX", cls="text-sm"), cls="gap-2"),
+                        DivLAligned(UkIcon("trending-up", height=14, style="color:#10b981;"), Span("Treasury vs FX", style="font-size:0.8rem;"), cls="gap-2"),
                         href="#", cls="sidebar-topic no-underline",
                         onclick="var inp=document.getElementById('chat-input'); inp.value='Show US Treasury 10Y vs EUR/USD chart'; inp.disabled=false; inp.form.requestSubmit(); return false;",
                     ),
                     cls="sidebar-section",
                 ),
+                # Backtest (AlpaTrade-style expander)
+                _expander_section("Backtest", "backtest", [
+                    _shortcut_item("EUR/USD momentum 1Y", "Backtest momentum on EUR/USD over last year"),
+                    _shortcut_item("GBP/USD momentum 1Y", "Backtest momentum on GBP/USD over last year"),
+                    _shortcut_item("Short USD/JPY", "Short USD/JPY — backtest with 1% TP, 0.5% SL"),
+                    _shortcut_item("Custom backtest...", "Backtest momentum strategy on "),
+                ]),
+                # Research (AlpaTrade-style expander)
+                _expander_section("Research", "research", [
+                    _shortcut_item("FX pair analysis", "Analyze EUR/USD with fundamentals and technicals"),
+                    _shortcut_item("Treasury yield chart", "Show US Treasury 10Y yield chart"),
+                    _shortcut_item("Web search", "Search for latest macro economic news"),
+                    _shortcut_item("Latest news summary", "Summarize today's top macro news"),
+                ]),
+                # Reports (AlpaTrade-style expander)
+                _expander_section("Reports", "reports", [
+                    _shortcut_item("News history", "Show news history"),
+                    _shortcut_item("Market movers today", "Show me top market movers"),
+                    _shortcut_item("Event categories", "What macro event categories are active?"),
+                ]),
                 # Upcoming Events
                 Div(
-                    Div("Upcoming Events", cls="sidebar-section-title"),
+                    Div("Events", cls="sidebar-section-title"),
                     _upcoming_events_widget(),
                     cls="sidebar-section",
                 ),
                 # Event Categories (collapsible)
-                Div(
-                    Div(
-                        DivFullySpaced(
-                            Span("Event Categories", cls="sidebar-section-title", style="margin-bottom:0;"),
-                            UkIcon("chevron-down", height=12, id="cat-chevron", style="color:#9ca3af;cursor:pointer;transition:transform 0.2s;"),
-                        ),
-                        onclick="var el=document.getElementById('cat-list'); var ch=document.getElementById('cat-chevron'); if(el.style.display==='none'){el.style.display='block';ch.style.transform='rotate(0deg)';}else{el.style.display='none';ch.style.transform='rotate(-90deg)';}",
-                        style="cursor:pointer;",
-                    ),
-                    Div(
-                        *[_sidebar_category(cat, active=(cat["slug"] == active_category)) for cat in categories],
-                        id="cat-list",
-                    ),
-                    cls="sidebar-section",
-                ),
+                _expander_section("Categories", "categories", [
+                    *[_sidebar_category(cat, active=(cat["slug"] == active_category)) for cat in categories],
+                ]),
                 # News (collapsed)
+                _expander_section("News", "news", [
+                    A(DivLAligned(UkIcon("list", height=14, style="color:#94a3b8;"), Span("News History", style="font-size:0.8rem;"), cls="gap-2"),
+                      href="/view/history", hx_get="/view/history", hx_target="#center-content", hx_swap="innerHTML",
+                      cls="sidebar-topic no-underline"),
+                    A(DivLAligned(UkIcon("rss", height=14, style="color:#94a3b8;"), Span("Live Feed", style="font-size:0.8rem;"), cls="gap-2"),
+                      href="#", cls="sidebar-topic no-underline",
+                      onclick="togglePane('right'); return false;"),
+                ]),
+                # Footer
                 Div(
-                    Div(
-                        DivFullySpaced(
-                            Span("News", cls="sidebar-section-title", style="margin-bottom:0;"),
-                            UkIcon("chevron-down", height=12, id="news-chevron", style="color:#9ca3af;cursor:pointer;transition:transform 0.2s;transform:rotate(-90deg);"),
-                        ),
-                        onclick="var el=document.getElementById('news-links'); var ch=document.getElementById('news-chevron'); if(el.style.display==='none'){el.style.display='block';ch.style.transform='rotate(0deg)';}else{el.style.display='none';ch.style.transform='rotate(-90deg)';}",
-                        style="cursor:pointer;",
-                    ),
-                    Div(
-                        A(DivLAligned(UkIcon("list", height=16), Span("News History", cls="text-sm"), cls="gap-2"),
-                          href="/view/history", hx_get="/view/history", hx_target="#center-content", hx_swap="innerHTML",
-                          cls="sidebar-topic no-underline"),
-                        A(DivLAligned(UkIcon("rss", height=16), Span("Live Feed", cls="text-sm"), cls="gap-2"),
-                          href="#", cls="sidebar-topic no-underline",
-                          onclick="togglePane('right'); return false;"),
-                        id="news-links", style="display:none;",
-                    ),
-                    cls="sidebar-section",
-                ),
-                # Version
-                Div(
-                    Span(f"v{APP_VERSION}", style="font-size:0.55rem; color:#c0c0c0;"),
-                    style="padding:8px 10px; margin-top:auto;",
+                    Span(f"v{APP_VERSION}", style="font-size:0.55rem; color:#475569;"),
+                    cls="sidebar-footer",
                 ),
                 id="left-pane",
                 cls="left-pane",
