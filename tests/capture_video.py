@@ -14,6 +14,7 @@ Output:
 """
 
 import asyncio
+import os
 from pathlib import Path
 
 ROOT = Path(__file__).parent.parent
@@ -115,13 +116,21 @@ def build_gif():
 
     gif_path = ROOT / "docs" / "demo_video.gif"
     w, h = images[0].size
-    resized = [img.resize((w // 2, h // 2), Image.LANCZOS) for img in images]
+    target_w = 1200
+    scale = target_w / w
+    target_h = int(h * scale)
+    resized = [img.resize((target_w, target_h), Image.LANCZOS) for img in images]
 
-    resized[0].save(
-        str(gif_path), save_all=True, append_images=resized[1:],
-        duration=1500, loop=0, optimize=True,
+    quantized = []
+    for img in resized:
+        q = img.quantize(colors=256, method=Image.Quantize.MEDIANCUT, dither=Image.Dither.FLOYDSTEINBERG)
+        quantized.append(q)
+
+    quantized[0].save(
+        str(gif_path), save_all=True, append_images=quantized[1:],
+        duration=1800, loop=0, optimize=True,
     )
-    print(f"  Saved GIF: {gif_path}")
+    print(f"  Saved GIF: {gif_path} ({os.path.getsize(str(gif_path)) / 1024:.0f}K)")
 
     # Copy to static for serving
     static_path = ROOT / "static" / "demo_video.gif"
