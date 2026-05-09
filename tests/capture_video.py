@@ -53,63 +53,48 @@ async def run():
         browser = await p.chromium.launch(headless=True)
         page = await browser.new_page(viewport={"width": 1440, "height": 900})
 
-        # ===== LANDING PAGE =====
-        await page.goto(BASE_URL)
-        await asyncio.sleep(2)
-        await capture(page, "landing_hero", 1.5)
-
-        # Scroll to features
-        await page.evaluate("() => { document.getElementById('features')?.scrollIntoView({behavior:'smooth'}); }")
-        await capture(page, "landing_features", 1.5)
-
-        # Scroll to how it works
-        await page.evaluate("() => { document.getElementById('how')?.scrollIntoView({behavior:'smooth'}); }")
-        await capture(page, "landing_how", 1.5)
-
-        # ===== HOMEPAGE (app) =====
+        # ===== APP SHELL =====
         await page.goto(f"{BASE_URL}/category/central-bank", wait_until="domcontentloaded")
         await asyncio.sleep(3)
         await capture(page, "welcome_screen", 1.5)
-        await capture(page, "welcome_hold", 1.0)
 
         # ===== CHAT: market movers =====
-        await send_chat(page, "What's moving markets today?", 4)
-        await capture(page, "chat_movers", 1.0)
-
-        # ===== CHAT: FX strategies =====
-        await send_chat(page, "Give me FX strategies for a Hormuz deal scenario", 8)
-        await capture(page, "chat_strategies", 1.0)
+        await send_chat(page, "What's moving markets today?", 15)
+        await capture(page, "chat_movers_response", 2.0)
 
         # Scroll to see full response
         await page.evaluate("() => { var m=document.getElementById('chat-messages'); if(m) m.scrollTop=m.scrollHeight; }")
-        await capture(page, "chat_strategies_scroll", 0.5)
+        await capture(page, "chat_movers_scroll", 2.0)
+
+        # ===== CHAT: FX strategies =====
+        await send_chat(page, "Give me FX strategies for a Hormuz deal scenario", 20)
+        await capture(page, "chat_strategies_response", 2.0)
+
+        # Scroll to see full response
+        await page.evaluate("() => { var m=document.getElementById('chat-messages'); if(m) m.scrollTop=m.scrollHeight; }")
+        await capture(page, "chat_strategies_scroll", 2.0)
 
         # ===== CHAT: backtest =====
-        await send_chat(page, "Backtest momentum on EUR/USD over last year", 10)
-        await capture(page, "chat_backtest", 1.0)
+        await send_chat(page, "Backtest momentum on EUR/USD over last year", 30)
+        await capture(page, "chat_backtest_response", 2.0)
 
-        # Scroll to see results
+        # Scroll to see backtest results / chart
         await page.evaluate("() => { var m=document.getElementById('chat-messages'); if(m) m.scrollTop=m.scrollHeight; }")
-        await capture(page, "chat_backtest_scroll", 0.5)
+        await capture(page, "chat_backtest_scroll", 2.0)
 
         # ===== VIEW: Currency Pairs =====
         await page.evaluate("""
             () => { htmx.ajax('GET', '/view/pairs', {target:'#center-content', swap:'innerHTML'}); }
         """)
-        await asyncio.sleep(2)
-        await capture(page, "view_pairs", 1.0)
+        await asyncio.sleep(3)
+        await capture(page, "view_pairs", 1.5)
 
         # ===== VIEW: News History =====
         await page.evaluate("""
             () => { htmx.ajax('GET', '/view/history', {target:'#center-content', swap:'innerHTML'}); }
         """)
-        await asyncio.sleep(2)
-        await capture(page, "view_history", 1.0)
-
-        # ===== BACK TO LANDING =====
-        await page.goto(BASE_URL, wait_until="domcontentloaded")
-        await asyncio.sleep(2)
-        await capture(page, "final_landing", 1.5)
+        await asyncio.sleep(3)
+        await capture(page, "view_history", 1.5)
 
         await browser.close()
 

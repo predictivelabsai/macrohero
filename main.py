@@ -131,10 +131,10 @@ def _get_session_user(sess) -> dict | None:
     return {"id": uid, "name": sess.get("user_name", "")}
 
 
-def _create_new_session(category_slug: str = None) -> dict:
+def _create_new_session(category_slug: str = None, user_id: str = None) -> dict:
     result = fetch_one("""
-        INSERT INTO chat_sessions (category_slug) VALUES (:slug) RETURNING id, category_slug, title, created_at
-    """, {"slug": category_slug})
+        INSERT INTO chat_sessions (category_slug, user_id) VALUES (:slug, :uid) RETURNING id, category_slug, title, created_at
+    """, {"slug": category_slug, "uid": user_id})
     return result
 
 
@@ -169,11 +169,14 @@ def _get_recent_articles(limit: int = 20) -> list[dict]:
     """, {"limit": limit})
 
 
-def _chat_history_items(active_session_id: str) -> list:
+def _chat_history_items(active_session_id: str, user_id: str = None) -> list:
+    if not user_id:
+        return []
     sessions = fetch_all("""
         SELECT id, title, created_at FROM chat_sessions
+        WHERE user_id = :uid
         ORDER BY updated_at DESC LIMIT 8
-    """)
+    """, {"uid": user_id})
     items = []
     for s in sessions:
         is_active = str(s["id"]) == active_session_id
@@ -335,14 +338,15 @@ def index(req, sess):
     if not user:
         from modules.landing import landing_page
         return landing_page()
-    chat_sess = _create_new_session("general")
+    chat_sess = _create_new_session("general", user_id=user["id"])
     return _app_shell(chat_sess, user=user)
 
 
 @rt("/category/{category_slug}")
 def category_view(category_slug: str, sess):
     user = _get_session_user(sess)
-    chat_sess = _create_new_session(category_slug)
+    uid = user["id"] if user else None
+    chat_sess = _create_new_session(category_slug, user_id=uid)
     return _app_shell(chat_sess, active_category=category_slug, user=user)
 
 
@@ -849,7 +853,7 @@ def _app_shell(session: dict, active_category: str = None, user: dict = None):
                             cls="gap-1",
                             style="padding:0 4px; margin-bottom:4px;",
                         ),
-                        *_chat_history_items(session_id),
+                        *_chat_history_items(session_id, user_id=user["id"] if user else None),
                     ], collapsed=False),
                     cls="sidebar-section",
                 ),
