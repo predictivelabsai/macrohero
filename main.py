@@ -18,11 +18,13 @@ from db.pool import fetch_all, fetch_one, execute_sql
 config = load_config()
 
 sse_script = Script(src="https://unpkg.com/htmx-ext-sse@2.2.3/sse.js")
+favicon_link = Link(rel="icon", type="image/svg+xml", href="/static/favicon.svg")
 
 app, rt = fast_app(
     hdrs=(
         Theme.blue.headers(highlightjs=True),
         sse_script,
+        favicon_link,
         Style("""
             html, body { overflow-x: hidden; max-width: 100vw; }
             .app-layout { display: flex; gap: 0; height: calc(100vh - 48px); overflow: hidden; }
