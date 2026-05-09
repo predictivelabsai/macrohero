@@ -67,7 +67,7 @@ async def run():
         await capture(page, "landing_how", 1.5)
 
         # ===== HOMEPAGE (app) =====
-        await page.goto(BASE_URL, wait_until="domcontentloaded")
+        await page.goto(f"{BASE_URL}/category/central-bank", wait_until="domcontentloaded")
         await asyncio.sleep(3)
         await capture(page, "welcome_screen", 1.5)
         await capture(page, "welcome_hold", 1.0)
@@ -106,10 +106,10 @@ async def run():
         await asyncio.sleep(2)
         await capture(page, "view_history", 1.0)
 
-        # ===== BACK TO WELCOME =====
+        # ===== BACK TO LANDING =====
         await page.goto(BASE_URL, wait_until="domcontentloaded")
         await asyncio.sleep(2)
-        await capture(page, "final_welcome", 1.5)
+        await capture(page, "final_landing", 1.5)
 
         await browser.close()
 
