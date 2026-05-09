@@ -216,3 +216,9 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# MacroHero
+.sesskey
+.playwright-mcp/
+screenshots/
+docs/frames/

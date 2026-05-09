@@ -332,6 +332,9 @@ def _get_upcoming_events() -> list[dict]:
 @rt
 def index(req, sess):
     user = _get_session_user(sess)
+    if not user:
+        from modules.landing import landing_page
+        return landing_page()
     chat_sess = _create_new_session("general")
     return _app_shell(chat_sess, user=user)
 

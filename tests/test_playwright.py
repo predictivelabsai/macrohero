@@ -8,37 +8,30 @@ SCREENSHOTS = Path(__file__).parent.parent / "screenshots"
 SCREENSHOTS.mkdir(exist_ok=True)
 
 
-def test_homepage():
-    """Test 1: Homepage loads with 3-pane layout."""
+def test_landing_page():
+    """Test 1: Landing page loads for unauthenticated users."""
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         page = browser.new_page(viewport={"width": 1440, "height": 900})
         page.goto(BASE_URL, wait_until="domcontentloaded")
-        page.wait_for_timeout(3000)
+        page.wait_for_timeout(2000)
 
-        # Verify key elements
-        assert page.locator(".left-pane").is_visible(), "Left pane not visible"
-        assert page.locator(".center-pane").is_visible(), "Center pane not visible"
-        assert page.locator(".right-pane").is_visible(), "Right pane not visible"
-
-        # Check branding
+        # Check hero section
         assert page.locator("text=MacroHero").first.is_visible(), "MacroHero branding not found"
+        assert page.locator("text=macro intelligence").first.is_visible(), "Hero tagline not found"
 
-        # Check sidebar sections
-        assert page.locator("text=Trading").first.is_visible(), "Trading section not found"
-        assert page.locator(".sidebar-expander", has_text="Categories").is_visible(), "Categories expander not found"
+        # Check CTA buttons
+        assert page.locator("text=Sign in").first.is_visible(), "Sign in button not found"
+        assert page.locator("text=Book a demo").first.is_visible(), "Book a demo button not found"
 
-        # Check starter cards
-        assert page.locator(".starter-card").count() >= 4, "Not enough starter cards"
+        # Check features section
+        assert page.locator("text=Features").first.is_visible(), "Features section not found"
 
-        # Check chat input
-        assert page.locator("#chat-input").is_visible(), "Chat input not visible"
+        # Check team section exists
+        assert page.locator("text=Team").first.is_visible(), "Team section not found"
 
-        # Check right pane feed header
-        assert page.locator("text=Macro News Feed").is_visible(), "Live feed header not found"
-
-        page.screenshot(path=str(SCREENSHOTS / "01_homepage.png"), full_page=False)
-        print("PASS: Homepage loads with all 3 panes")
+        page.screenshot(path=str(SCREENSHOTS / "01_landing.png"), full_page=False)
+        print("PASS: Landing page loads with hero, features, and CTAs")
         browser.close()
 
 
@@ -96,7 +89,7 @@ def test_chat_send():
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         page = browser.new_page(viewport={"width": 1440, "height": 900})
-        page.goto(BASE_URL, wait_until="domcontentloaded")
+        page.goto(f"{BASE_URL}/category/central-bank", wait_until="domcontentloaded")
         page.wait_for_timeout(3000)
 
         # Type a message
@@ -145,7 +138,7 @@ def test_view_pairs():
 
 if __name__ == "__main__":
     tests = [
-        test_homepage,
+        test_landing_page,
         test_login_page,
         test_register_page,
         test_category_view,
