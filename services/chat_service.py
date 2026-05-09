@@ -360,11 +360,11 @@ RESPONSE FORMAT — ALWAYS structure your responses like a professional trading 
 
 3. **Summary Table**: Include a ranked markdown table of strategies with columns: Rank, Trade, Rationale, Conviction.
 
-4. **Next Steps**: ALWAYS end with "Would you like me to:" followed by 2-4 actionable suggestions as bullet points, such as:
-   - **Backtest** this strategy on historical data (e.g., 2015 Iran deal analog)?
-   - **Pull live FX data** and chart the pair?
-   - **Show Treasury vs FX correlation** chart?
-   - **Analyze related news** for confirmation signals?
+4. **Next Steps**: ALWAYS end with "Would you like me to:" followed by 2-4 actionable backtest suggestions referencing the SPECIFIC strategies you just recommended. For example if you recommended Long EUR/USD and Short USD/CAD, suggest:
+   - **Backtest Long EUR/USD** momentum strategy over last year?
+   - **Backtest Short USD/CAD** with 1% TP, 0.5% SL?
+   - **Show Treasury vs EUR/USD** correlation chart?
+   Do NOT suggest generic technical analysis. Every suggestion should be a concrete, executable action tied to the strategies above.
 
 STRATEGY:
 1. For scenario/thesis questions (e.g., "strategies for a Hormuz deal"): Build a complete macro framework with FX + IR strategies, ranked summary table, and backtest suggestions.
@@ -391,6 +391,45 @@ RECENT MACRO NEWS IN DATABASE:
 
 def md_to_html(text: str) -> str:
     return markdown.markdown(text, extensions=["extra", "nl2br", "sane_lists"])
+
+
+async def _run_streaming_backtest(args: dict) -> AsyncGenerator[dict, None]:
+    """Run backtest yielding streaming events + final result."""
+    from services.backtest_service import (
+        run_momentum_backtest_streaming, build_backtest_results_html,
+        build_streaming_header_html, build_trade_row_html,
+    )
+    pair = args.get("pair", "EURUSD")
+    period = args.get("period", "1y")
+    lookback = args.get("lookback", 20)
+    take_profit = args.get("take_profit", 1.0)
+    stop_loss = args.get("stop_loss", 0.5)
+
+    yield {"type": "backtest_header", "html": build_streaming_header_html(pair, "momentum")}
+
+    import asyncio
+    final_result = None
+    try:
+        for event in run_momentum_backtest_streaming(
+            pair=pair, period=period, lookback=lookback,
+            take_profit=take_profit, stop_loss=stop_loss,
+        ):
+            if event["type"] == "trade":
+                yield {"type": "backtest_trade", "html": build_trade_row_html(event["trade"], event["index"])}
+                await asyncio.sleep(0)
+            elif event["type"] == "error":
+                yield {"type": "backtest_result", "text": event["error"]}
+                return
+            elif event["type"] == "complete":
+                final_result = event["result"]
+    except Exception as e:
+        yield {"type": "backtest_result", "text": f"Backtest error: {e}"}
+        return
+
+    if final_result:
+        yield {"type": "backtest_result", "text": build_backtest_results_html(final_result)}
+    else:
+        yield {"type": "backtest_result", "text": "Backtest completed with no results."}
 
 
 async def get_chat_response_stream(
@@ -446,17 +485,28 @@ async def get_chat_response_stream(
             label = TOOL_LABELS.get(name, f"Using {name}...")
             yield {"type": "status", "text": label}
 
-            tool_fn = TOOL_MAP.get(name)
-            if tool_fn:
-                try:
-                    args = tc.get("args", {})
-                    if isinstance(args, str):
-                        args = json.loads(args)
-                    result = tool_fn.invoke(args)
-                except Exception as e:
-                    result = f"Tool error: {e}"
+            if name == "backtest_fx_strategy":
+                args = tc.get("args", {})
+                if isinstance(args, str):
+                    args = json.loads(args)
+                result = ""
+                async for bt_event in _run_streaming_backtest(args):
+                    if bt_event["type"] == "backtest_result":
+                        result = bt_event["text"]
+                    else:
+                        yield bt_event
             else:
-                result = f"Unknown tool: {name}"
+                tool_fn = TOOL_MAP.get(name)
+                if tool_fn:
+                    try:
+                        args = tc.get("args", {})
+                        if isinstance(args, str):
+                            args = json.loads(args)
+                        result = tool_fn.invoke(args)
+                    except Exception as e:
+                        result = f"Tool error: {e}"
+                else:
+                    result = f"Unknown tool: {name}"
 
             call_id = tc.get("id", f"call_{unique_calls.index(tc)}")
             messages.append(ToolMessage(content=str(result), tool_call_id=call_id))

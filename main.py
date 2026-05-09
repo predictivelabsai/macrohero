@@ -513,6 +513,7 @@ async def chat_send(session_id: str, msg: str, req, sess, website: str = ""):
         hx_ext="sse",
         sse_connect=f"/sse/chat/{session_id}",
         sse_swap="token",
+        sse_close="done",
         hx_swap="beforeend",
     )
     return Div(user_bubble, thinking, response_area, hx_swap_oob="beforeend:#chat-messages")
@@ -573,6 +574,7 @@ async def _chat_stream(session_id: str, messages: list[dict], category_slug: str
 
     from services.chat_service import get_chat_response_stream
     full_response = ""
+    backtest_streaming = False
     try:
         async for event in get_chat_response_stream(messages, category_slug):
             if event["type"] == "status":
@@ -580,9 +582,29 @@ async def _chat_stream(session_id: str, messages: list[dict], category_slug: str
                     Script(f"document.getElementById('thinking-text').textContent='{event['text']}';"),
                     event="token",
                 )
+            elif event["type"] == "backtest_header":
+                backtest_streaming = True
+                yield sse_message(
+                    Div(
+                        Script("var el=document.getElementById('thinking-indicator'); if(el) el.remove();"),
+                        Div(NotStr(event["html"]), cls="chat-assistant text-sm", id="bt-stream-container"),
+                    ),
+                    event="token",
+                )
+            elif event["type"] == "backtest_trade":
+                yield sse_message(
+                    Script(f"document.getElementById('bt-live-body').insertAdjacentHTML('beforeend','{event['html'].replace(chr(39), chr(92)+chr(39))}');"),
+                    event="token",
+                )
             elif event["type"] == "token":
                 html = event["html"]
                 full_response = html
+                if backtest_streaming:
+                    yield sse_message(
+                        Script("var el=document.getElementById('bt-stream-container'); if(el) el.remove();"),
+                        event="token",
+                    )
+                    backtest_streaming = False
                 yield sse_message(
                     Div(
                         Script("var el=document.getElementById('thinking-indicator'); if(el) el.remove();"),
@@ -607,6 +629,7 @@ async def _chat_stream(session_id: str, messages: list[dict], category_slug: str
         Script("document.getElementById('chat-input').disabled=false; document.getElementById('chat-input').focus();"),
         event="token",
     )
+    yield sse_message("", event="done")
 
 
 async def _movers_stream(session_id: str):
@@ -648,6 +671,7 @@ async def _movers_stream(session_id: str):
         Script("document.getElementById('chat-input').disabled=false; document.getElementById('chat-input').focus();"),
         event="token",
     )
+    yield sse_message("", event="done")
 
 
 # ===================== AUTH ROUTES =====================
