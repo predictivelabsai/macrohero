@@ -275,8 +275,27 @@ def get_treasury_chart(period: str = "1y") -> str:
     return f"CHART_HTML:{html}"
 
 
+@tool
+def backtest_fx_strategy(pair: str = "EURUSD", period: str = "1y", strategy: str = "momentum",
+                         lookback: int = 20, take_profit: float = 1.0, stop_loss: float = 0.5) -> str:
+    """Backtest an FX trading strategy on a currency pair. Returns metrics (Sharpe, return, drawdown), equity curve chart, and trade log.
+    Use this when the user asks to backtest, test a strategy, or wants to see historical performance of an FX trade idea.
+    Strategies: momentum (trend-following). Pair format: EURUSD, GBPUSD, USDJPY, etc."""
+    from services.backtest_service import run_momentum_backtest, build_backtest_results_html
+    try:
+        result = run_momentum_backtest(
+            pair=pair, period=period, lookback=lookback,
+            take_profit=take_profit, stop_loss=stop_loss,
+        )
+        if "error" in result:
+            return result["error"]
+        return build_backtest_results_html(result)
+    except Exception as e:
+        return f"Backtest error: {e}"
+
+
 TOOLS = [search_tavily, get_recent_macro_news, analyze_currency_pair, get_market_movers,
-         get_treasury_vs_fx_chart, get_fx_chart, get_treasury_chart]
+         get_treasury_vs_fx_chart, get_fx_chart, get_treasury_chart, backtest_fx_strategy]
 TOOL_MAP = {t.name: t for t in TOOLS}
 TOOL_LABELS = {
     "search_tavily": "Searching Tavily...",
@@ -286,6 +305,7 @@ TOOL_LABELS = {
     "get_treasury_vs_fx_chart": "Building Treasury vs FX chart...",
     "get_fx_chart": "Building FX chart...",
     "get_treasury_chart": "Building Treasury yield chart...",
+    "backtest_fx_strategy": "Running FX backtest...",
 }
 
 
@@ -317,26 +337,44 @@ def _get_context(category_slug: str = None) -> str:
 
 def _build_messages(chat_history: list[dict], category_slug: str = None) -> list:
     context = _get_context(category_slug)
-    system_msg = f"""You are MacroHero, an AI macro-economic market analyst. You help users understand how macro news events affect currency markets, interest rates, and equity indices.
+    system_msg = f"""You are MacroHero, an AI macro-economic market analyst and trading strategist. You help users develop FX and interest rate trading strategies based on macro news, geopolitical events, and economic data.
 
-You have access to tools — use them aggressively:
+TOOLS — use them aggressively:
 - search_tavily: Search the web for breaking macro news, central bank decisions, economic data.
 - get_recent_macro_news: Query the MacroHero database by event category (central-bank, earnings, gdp, trade, employment, inflation, geopolitical).
 - analyze_currency_pair: Get live FX data from yfinance (EURUSD, GBPUSD, USDJPY, USDCHF, AUDUSD, USDCAD).
 - get_market_movers: Get top market-moving news ranked by predicted FX impact.
-- get_treasury_vs_fx_chart: Generate a dual-axis Plotly chart comparing US 10Y Treasury yield vs an FX pair. USE THIS when the user asks to compare treasuries/rates vs FX.
+- get_treasury_vs_fx_chart: Generate a dual-axis Plotly chart comparing US 10Y Treasury yield vs an FX pair.
 - get_fx_chart: Generate a Plotly line chart for an FX pair over time.
 - get_treasury_chart: Generate a Plotly line chart of US 10Y Treasury yield over time.
+- backtest_fx_strategy: Backtest an FX trading strategy on historical data. Returns metrics (Sharpe, return, drawdown), equity curve, and trade log.
+
+RESPONSE FORMAT — ALWAYS structure your responses like a professional trading desk:
+
+1. **Macro Framework**: Start with a markdown table summarizing the macro thesis (channels and implications).
+
+2. **Strategy Breakdown**: For each strategy, use:
+   - A ### header with the trade name and conviction level
+   - Bullet points for rationale
+   - Bold the specific **Trade:** expression (e.g., **Short USD/JPY**)
+
+3. **Summary Table**: Include a ranked markdown table of strategies with columns: Rank, Trade, Rationale, Conviction.
+
+4. **Next Steps**: ALWAYS end with "Would you like me to:" followed by 2-4 actionable suggestions as bullet points, such as:
+   - **Backtest** this strategy on historical data (e.g., 2015 Iran deal analog)?
+   - **Pull live FX data** and chart the pair?
+   - **Show Treasury vs FX correlation** chart?
+   - **Analyze related news** for confirmation signals?
 
 STRATEGY:
-1. For broad questions ("what's moving markets"): use get_market_movers first.
-2. For currency pair questions: use BOTH analyze_currency_pair AND get_recent_macro_news.
-3. For event-specific questions: use get_recent_macro_news with the category filter.
-4. For chart/visualization requests: use the chart tools (get_treasury_vs_fx_chart, get_fx_chart, get_treasury_chart). When the tool returns CHART_HTML, include it verbatim — do NOT re-describe it in markdown.
-5. Always include source, region, currency, and predicted direction/magnitude when available.
-6. Keep responses concise — bullet points with context, not paragraphs.
+1. For scenario/thesis questions (e.g., "strategies for a Hormuz deal"): Build a complete macro framework with FX + IR strategies, ranked summary table, and backtest suggestions.
+2. For backtest requests: use backtest_fx_strategy. The tool returns CHART_HTML — include it verbatim.
+3. For chart/visualization requests: use chart tools. When the tool returns CHART_HTML, include it verbatim.
+4. For currency pair questions: use BOTH analyze_currency_pair AND get_recent_macro_news.
+5. For broad questions ("what's moving markets"): use get_market_movers first.
+6. Always include source, region, currency, and predicted direction/magnitude when available.
 
-Format: use markdown headers (##), bold (**text**), bullet lists, and [title](url) links.
+Format: Use markdown tables (|col1|col2|), headers (##, ###), bold (**text**), bullet lists. Use [title](url) for links.
 When a tool returns text starting with CHART_HTML:, include the HTML after CHART_HTML: as-is in your response — the frontend renders it.
 
 RECENT MACRO NEWS IN DATABASE:

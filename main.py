@@ -190,12 +190,12 @@ def _sidebar_category(cat: dict, active: bool = False):
 
 def _starter_cards(session_id: str):
     starters = [
-        ("What's moving markets today?", "trending-up"),
-        ("EUR/USD outlook this week", "bar-chart-2"),
-        ("Latest central bank news", "landmark"),
-        ("Show me top market movers", "zap"),
-        ("Trade & tariff impact on FX", "globe"),
-        ("Employment data trends", "users"),
+        ("Give me FX strategies for a Hormuz deal scenario", "globe"),
+        ("Backtest momentum on EUR/USD over last year", "bar-chart-2"),
+        ("Short USD/JPY — backtest with 1% TP, 0.5% SL", "trending-up"),
+        ("What's moving markets today?", "zap"),
+        ("US Treasury vs EUR/USD chart", "landmark"),
+        ("Show me top market movers", "activity"),
     ]
     cards = []
     for question, icon in starters:
@@ -209,36 +209,65 @@ def _starter_cards(session_id: str):
     return Div(*cards, cls="starter-grid")
 
 
-def _trending_widget(categories: list[dict]):
-    if not categories:
-        return P("No trending categories.", cls="text-xs text-muted px-2")
+def _upcoming_events_widget():
+    events = _get_upcoming_events()
+    if not events:
+        return P("No upcoming events.", cls="text-xs text-muted px-2")
     items = []
-    for cat in categories[:5]:
+    for ev in events[:6]:
+        date_str = ev.get("date", "")
         items.append(
-            DivFullySpaced(
-                DivLAligned(
-                    Span("", style=f"width:8px;height:8px;border-radius:50%;background:{cat['color']};display:inline-block;"),
-                    Span(cat["name"], cls="text-xs"),
-                    cls="gap-2",
+            Div(
+                DivFullySpaced(
+                    Span(ev.get("name", ""), cls="text-xs font-medium", style="line-height:1.2;"),
+                    Span(ev.get("country", ""), cls="text-xs text-muted"),
                 ),
-                Span(str(cat.get("article_count", 0)), cls="text-xs text-muted"),
-                cls="py-0.5",
+                DivFullySpaced(
+                    Span(date_str, cls="text-xs text-muted"),
+                    Span(ev.get("impact", ""), cls="text-xs", style=f"color:{'#ef4444' if ev.get('impact')=='High' else '#f59e0b' if ev.get('impact')=='Medium' else '#6b7280'};font-weight:600;"),
+                ),
+                cls="py-1 px-2", style="border-bottom:1px solid #f3f4f6;",
             )
         )
-    return Div(*items, id="trending-list",
-               hx_get="/api/trending", hx_trigger="every 60s", hx_swap="outerHTML")
+    return Div(*items, id="upcoming-events",
+               hx_get="/api/events", hx_trigger="every 300s", hx_swap="outerHTML")
 
 
-def _get_trending() -> list[dict]:
-    return fetch_all("""
-        SELECT c.name, c.slug, c.color, c.icon, COUNT(nc.news_id) AS article_count
-        FROM event_categories c
-        JOIN news_categories nc ON nc.category_id = c.id
-        JOIN macro_news n ON n.id = nc.news_id
-        WHERE n.created_at > NOW() - INTERVAL '24 hours'
-        GROUP BY c.id, c.name, c.slug, c.color, c.icon
-        ORDER BY article_count DESC
-    """)
+_events_cache = {"data": [], "fetched_at": 0}
+
+
+def _get_upcoming_events() -> list[dict]:
+    import time
+    now = time.time()
+    if _events_cache["data"] and (now - _events_cache["fetched_at"]) < 600:
+        return _events_cache["data"]
+
+    api_key = os.environ.get("EODHD_API_KEY")
+    if not api_key:
+        return []
+    try:
+        import httpx
+        from datetime import datetime, timedelta
+        today = datetime.now().strftime("%Y-%m-%d")
+        end = (datetime.now() + timedelta(days=7)).strftime("%Y-%m-%d")
+        url = f"https://eodhd.com/api/economic-events?api_token={api_key}&from={today}&to={end}&fmt=json"
+        resp = httpx.get(url, timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+        events = []
+        for ev in data[:20]:
+            impact = "High" if ev.get("importance", 0) >= 3 else "Medium" if ev.get("importance", 0) >= 2 else "Low"
+            events.append({
+                "name": ev.get("event", "Unknown"),
+                "country": ev.get("country", ""),
+                "date": ev.get("date", "")[:10],
+                "impact": impact,
+            })
+        _events_cache["data"] = events
+        _events_cache["fetched_at"] = now
+        return events
+    except Exception:
+        return _events_cache["data"]
 
 
 # ===================== ROUTES =====================
@@ -355,9 +384,9 @@ def view_history(page: int = 1, category: str = ""):
     )
 
 
-@rt("/api/trending")
-def api_trending():
-    return _trending_widget(_get_trending())
+@rt("/api/events")
+def api_events():
+    return _upcoming_events_widget()
 
 
 @rt("/api/clear-history", methods=["POST"])
@@ -712,6 +741,7 @@ def _app_shell(session: dict, active_category: str = None, user: dict = None):
         Div(
             # LEFT PANE
             Div(
+                # New Chat
                 Div(
                     DivFullySpaced(
                         A(
@@ -726,37 +756,72 @@ def _app_shell(session: dict, active_category: str = None, user: dict = None):
                     *_chat_history_items(session_id),
                     cls="sidebar-section",
                 ),
-                # Market Views
+                # Trading
                 Div(
-                    Div("Views", cls="sidebar-section-title"),
+                    Div("Trading", cls="sidebar-section-title"),
                     A(
-                        DivLAligned(UkIcon("zap", height=18), Span("Market Movers", cls="text-sm font-medium"), cls="gap-2"),
-                        href="#",
-                        cls="sidebar-topic no-underline",
+                        DivLAligned(UkIcon("zap", height=16), Span("Market Movers", cls="text-sm"), cls="gap-2"),
+                        href="#", cls="sidebar-topic no-underline",
                         onclick="var inp=document.getElementById('chat-input'); inp.value='Show me top market movers'; inp.disabled=false; inp.form.requestSubmit(); return false;",
                     ),
                     A(
-                        DivLAligned(UkIcon("bar-chart-2", height=18), Span("Currency Pairs", cls="text-sm font-medium"), cls="gap-2"),
+                        DivLAligned(UkIcon("bar-chart-2", height=16), Span("Currency Pairs", cls="text-sm"), cls="gap-2"),
                         href="/view/pairs", hx_get="/view/pairs", hx_target="#center-content", hx_swap="innerHTML",
                         cls="sidebar-topic no-underline",
                     ),
                     A(
-                        DivLAligned(UkIcon("list", height=18), Span("News History", cls="text-sm font-medium"), cls="gap-2"),
-                        href="/view/history", hx_get="/view/history", hx_target="#center-content", hx_swap="innerHTML",
-                        cls="sidebar-topic no-underline",
+                        DivLAligned(UkIcon("activity", height=16), Span("Backtest Strategy", cls="text-sm"), cls="gap-2"),
+                        href="#", cls="sidebar-topic no-underline",
+                        onclick="var inp=document.getElementById('chat-input'); inp.value='Backtest momentum on EUR/USD over last year'; inp.disabled=false; inp.form.requestSubmit(); return false;",
+                    ),
+                    A(
+                        DivLAligned(UkIcon("trending-up", height=16), Span("Treasury vs FX", cls="text-sm"), cls="gap-2"),
+                        href="#", cls="sidebar-topic no-underline",
+                        onclick="var inp=document.getElementById('chat-input'); inp.value='Show US Treasury 10Y vs EUR/USD chart'; inp.disabled=false; inp.form.requestSubmit(); return false;",
                     ),
                     cls="sidebar-section",
                 ),
-                # Event Categories
+                # Upcoming Events
                 Div(
-                    Div("Event Categories", cls="sidebar-section-title"),
-                    *[_sidebar_category(cat, active=(cat["slug"] == active_category)) for cat in categories],
+                    Div("Upcoming Events", cls="sidebar-section-title"),
+                    _upcoming_events_widget(),
                     cls="sidebar-section",
                 ),
-                # Trending
+                # Event Categories (collapsible)
                 Div(
-                    Div("Trending", cls="sidebar-section-title"),
-                    _trending_widget(_get_trending()),
+                    Div(
+                        DivFullySpaced(
+                            Span("Event Categories", cls="sidebar-section-title", style="margin-bottom:0;"),
+                            UkIcon("chevron-down", height=12, id="cat-chevron", style="color:#9ca3af;cursor:pointer;transition:transform 0.2s;"),
+                        ),
+                        onclick="var el=document.getElementById('cat-list'); var ch=document.getElementById('cat-chevron'); if(el.style.display==='none'){el.style.display='block';ch.style.transform='rotate(0deg)';}else{el.style.display='none';ch.style.transform='rotate(-90deg)';}",
+                        style="cursor:pointer;",
+                    ),
+                    Div(
+                        *[_sidebar_category(cat, active=(cat["slug"] == active_category)) for cat in categories],
+                        id="cat-list",
+                    ),
+                    cls="sidebar-section",
+                ),
+                # News (collapsed)
+                Div(
+                    Div(
+                        DivFullySpaced(
+                            Span("News", cls="sidebar-section-title", style="margin-bottom:0;"),
+                            UkIcon("chevron-down", height=12, id="news-chevron", style="color:#9ca3af;cursor:pointer;transition:transform 0.2s;transform:rotate(-90deg);"),
+                        ),
+                        onclick="var el=document.getElementById('news-links'); var ch=document.getElementById('news-chevron'); if(el.style.display==='none'){el.style.display='block';ch.style.transform='rotate(0deg)';}else{el.style.display='none';ch.style.transform='rotate(-90deg)';}",
+                        style="cursor:pointer;",
+                    ),
+                    Div(
+                        A(DivLAligned(UkIcon("list", height=16), Span("News History", cls="text-sm"), cls="gap-2"),
+                          href="/view/history", hx_get="/view/history", hx_target="#center-content", hx_swap="innerHTML",
+                          cls="sidebar-topic no-underline"),
+                        A(DivLAligned(UkIcon("rss", height=16), Span("Live Feed", cls="text-sm"), cls="gap-2"),
+                          href="#", cls="sidebar-topic no-underline",
+                          onclick="togglePane('right'); return false;"),
+                        id="news-links", style="display:none;",
+                    ),
                     cls="sidebar-section",
                 ),
                 # Version

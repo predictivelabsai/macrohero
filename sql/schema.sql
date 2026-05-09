@@ -121,3 +121,96 @@ CREATE TABLE IF NOT EXISTS macrohero.mh_logs (
     source          VARCHAR(128),
     created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- ===================== BACKTESTING =====================
+
+CREATE TABLE IF NOT EXISTS macrohero.strategies (
+    id SERIAL PRIMARY KEY,
+    strategy_id VARCHAR(64) UNIQUE NOT NULL,
+    strategy_name VARCHAR(128) NOT NULL,
+    strategy_type VARCHAR(32) NOT NULL,
+    description TEXT,
+    parameters JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    is_active BOOLEAN DEFAULT TRUE
+);
+
+CREATE TABLE IF NOT EXISTS macrohero.backtest_runs (
+    id SERIAL PRIMARY KEY,
+    run_id VARCHAR(64) UNIQUE NOT NULL,
+    strategy_id VARCHAR(64) REFERENCES macrohero.strategies(strategy_id),
+    status VARCHAR(32) NOT NULL DEFAULT 'running',
+    config JSONB,
+    results JSONB,
+    started_at TIMESTAMPTZ,
+    completed_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_backtest_runs_run_id ON macrohero.backtest_runs(run_id);
+CREATE INDEX IF NOT EXISTS idx_backtest_runs_status ON macrohero.backtest_runs(status);
+
+CREATE TABLE IF NOT EXISTS macrohero.backtest_summaries (
+    id SERIAL PRIMARY KEY,
+    run_id VARCHAR(64) NOT NULL REFERENCES macrohero.backtest_runs(run_id),
+    variation_index INTEGER NOT NULL DEFAULT 0,
+    params JSONB,
+    total_return NUMERIC(12,4),
+    total_pnl NUMERIC(12,4),
+    win_rate NUMERIC(8,4),
+    total_trades INTEGER,
+    sharpe_ratio NUMERIC(10,4),
+    max_drawdown NUMERIC(10,4),
+    annualized_return NUMERIC(10,4),
+    is_best BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_backtest_summaries_run_id ON macrohero.backtest_summaries(run_id);
+
+CREATE TABLE IF NOT EXISTS macrohero.backtest_trades (
+    id SERIAL PRIMARY KEY,
+    run_id VARCHAR(64) NOT NULL REFERENCES macrohero.backtest_runs(run_id),
+    trade_type VARCHAR(16) NOT NULL,
+    symbol VARCHAR(16),
+    direction VARCHAR(8),
+    shares NUMERIC(12,4),
+    entry_time TIMESTAMPTZ,
+    exit_time TIMESTAMPTZ,
+    entry_price NUMERIC(12,4),
+    exit_price NUMERIC(12,4),
+    target_price NUMERIC(12,4),
+    stop_price NUMERIC(12,4),
+    hit_target BOOLEAN,
+    hit_stop BOOLEAN,
+    pnl NUMERIC(12,4),
+    pnl_pct NUMERIC(10,4),
+    capital_after NUMERIC(12,4),
+    total_fees NUMERIC(10,4) DEFAULT 0,
+    reason TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_backtest_trades_run_id ON macrohero.backtest_trades(run_id);
+CREATE INDEX IF NOT EXISTS idx_backtest_trades_symbol ON macrohero.backtest_trades(symbol);
+
+CREATE TABLE IF NOT EXISTS macrohero.pnl_summary (
+    id SERIAL PRIMARY KEY,
+    run_id VARCHAR(64) NOT NULL REFERENCES macrohero.backtest_runs(run_id),
+    symbol VARCHAR(16),
+    trade_count INTEGER,
+    win_count INTEGER,
+    loss_count INTEGER,
+    total_pnl NUMERIC(12,4),
+    total_fees NUMERIC(10,4),
+    avg_pnl NUMERIC(12,4),
+    avg_pnl_pct NUMERIC(10,4),
+    best_trade_pnl NUMERIC(12,4),
+    worst_trade_pnl NUMERIC(12,4),
+    total_return_pct NUMERIC(10,4),
+    win_rate NUMERIC(8,4),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_pnl_summary_run_id ON macrohero.pnl_summary(run_id);

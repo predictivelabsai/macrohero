@@ -103,9 +103,9 @@ sources:
       domain: reuters.com
       rss_url: https://www.reutersagency.com/feed/
       language: en
-    - name: BBC Business
-      domain: bbc.com
-      rss_url: http://feeds.bbci.co.uk/news/business/rss.xml
+    - name: CNBC
+      domain: cnbc.com
+      rss_url: https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=10001147
       language: en
 
 scraping:
