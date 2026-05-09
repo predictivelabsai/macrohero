@@ -736,7 +736,10 @@ def auth_login(username: str, password: str, sess):
     sess["user_id"] = str(user["id"])
     sess["user_name"] = user.get("display_name") or user.get("username") or username
     sess["anon_chat_count"] = 0
-    return RedirectResponse("/", status_code=303)
+    from starlette.responses import Response
+    resp = Response(status_code=200)
+    resp.headers["HX-Redirect"] = "/"
+    return resp
 
 
 @rt("/auth/register", methods=["POST"])
@@ -764,7 +767,10 @@ def auth_register(username: str, password: str, sess):
     sess["user_id"] = str(user["id"])
     sess["user_name"] = user.get("display_name") or username
     sess["anon_chat_count"] = 0
-    return RedirectResponse("/", status_code=303)
+    from starlette.responses import Response
+    resp = Response(status_code=200)
+    resp.headers["HX-Redirect"] = "/"
+    return resp
 
 
 @rt("/auth/logout")

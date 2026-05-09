@@ -289,14 +289,8 @@ def _hero():
         ),
         Div(
             Div(
-                Div("A macro intelligence operating system", cls="text-[11px] md:text-xs font-mono tracking-[0.18em] uppercase text-ink-dim"),
-                Div(
-                    Span("6 currency pairs · ", cls="text-ink-muted text-xs md:text-sm"),
-                    Span("8 AI tools · ", cls="text-accent text-xs md:text-sm font-mono"),
-                    Span("7 event categories · ", cls="text-ink-muted text-xs md:text-sm"),
-                    Span("5 news sources", cls="text-ink-muted text-xs md:text-sm"),
-                ),
-                cls="max-w-7xl mx-auto px-5 md:px-6 py-4 md:py-5 flex items-center justify-between flex-wrap gap-3",
+                Span("Brought to you by leading macro quantitative analysts and strategists", cls="text-ink-muted text-xs md:text-sm"),
+                cls="max-w-7xl mx-auto px-5 md:px-6 py-4 md:py-5 flex items-center justify-center",
             ),
             cls="border-y border-line bg-bg-elevated/60",
         ),
@@ -495,20 +489,14 @@ def _starter_cards_section():
 
 
 TEAM = [
-    ("Bilal Hafeez", "Founder & CEO",
-     "Ex-Global Head of Fixed Income Strategy at Nomura. Former Head of Multi-Asset Research at Deutsche Bank. Ranked #1 macro strategist by Institutional Investor."),
-    ("Andrew Simon", "Co-founder",
-     "Co-architect of the Macro Hive platform. Deep expertise in financial technology and macro research infrastructure."),
-    ("Viresh Kanabar", "Investment Strategist",
-     "8+ years investment experience. Ex-CCLA Investment Management, managing £12B in assets across macro and multi-asset strategies."),
-    ("Neel Mehta", "Cross-Asset Strategist",
-     "27 years at sell-side institutions. Cross-asset volatility and correlation specialist with deep FX options background."),
-    ("Iain Wadie", "Senior Software Engineer",
-     "M.Eng & PhD from University of Bristol, MIF from London Business School. Full-stack engineering for quantitative finance platforms."),
+    ("Andrew Simon", "https://www.linkedin.com/in/andrew-simon-43041728/"),
+    ("Julian Kaljuvee", "https://www.linkedin.com/in/juliankaljuvee/"),
 ]
 
+LINKEDIN_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>'
 
-def _team_card(name, role, bio):
+
+def _team_card(name, linkedin):
     initials = "".join(w[0] for w in name.split()[:2])
     return Article(
         Div(
@@ -516,9 +504,12 @@ def _team_card(name, role, bio):
             cls="team-photo rounded-xl border border-line flex items-center justify-center bg-bg-elevated",
         ),
         Div(
-            H4(name, cls="text-ink text-base font-medium mt-4"),
-            P(role, cls="text-accent text-xs font-mono mt-1 leading-snug"),
-            P(bio, cls="text-ink-muted text-xs mt-2 leading-relaxed"),
+            Div(
+                H4(name, cls="text-ink text-base font-medium"),
+                A(NotStr(LINKEDIN_SVG), href=linkedin, target="_blank", rel="noopener",
+                  cls="text-ink-dim hover:text-accent transition-colors ml-2"),
+                cls="flex items-center mt-4",
+            ),
             cls="px-1",
         ),
         cls="",
@@ -531,19 +522,11 @@ def _team_section():
             Div(
                 _eyebrow("Team"),
                 _heading(2, "Built by macro strategists and quant developers.", cls="mt-4 max-w-3xl"),
-                P(
-                    "The MacroHero team combines decades of institutional macro research, FX trading, and quantitative development experience. "
-                    "Content and team adapted from ",
-                    A("Macro Hive", href="https://macrohive.com/meet-the-team/", target="_blank", rel="noopener",
-                      cls="text-ink underline decoration-accent/50 underline-offset-4 hover:text-accent"),
-                    ".",
-                    cls="mt-5 text-ink-muted text-lg max-w-3xl leading-relaxed",
-                ),
                 cls="mb-14",
             ),
             Div(
-                *[_team_card(n, r, b) for n, r, b in TEAM],
-                cls="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-6",
+                *[_team_card(n, li) for n, li in TEAM],
+                cls="grid grid-cols-2 gap-6 max-w-md",
             ),
             cls="max-w-7xl mx-auto px-5 md:px-6",
         ),
