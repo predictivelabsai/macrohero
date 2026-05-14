@@ -1,0 +1,7 @@
+.DS_Store
+.env
+.env.local
+.next
+.ruff_cache
+node_modules
+tsconfig.tsbuildinfo
