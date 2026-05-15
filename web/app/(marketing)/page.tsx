@@ -77,7 +77,7 @@ const team = [
 export default function LandingPage() {
   return (
     <>
-      <section className="relative mx-auto max-w-6xl px-6 pt-24 pb-20 text-center sm:pt-32">
+      <section className="relative mx-auto max-w-6xl px-4 pt-16 pb-16 text-center sm:px-6 sm:pt-24 sm:pb-20 lg:pt-32">
         <span
           className="animate-fade-in font-mono text-[11px] uppercase tracking-[0.22em] text-primary"
           style={{ animationDelay: "60ms" }}
@@ -127,7 +127,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <Reveal as="section" className="mx-auto max-w-4xl px-6 pb-20">
+      <Reveal as="section" className="mx-auto max-w-4xl px-4 pb-20 sm:px-6">
         <div className="rounded-2xl border border-border bg-background/60 p-8 text-center backdrop-blur sm:p-10">
           <p className="text-lg leading-relaxed text-muted-foreground sm:text-xl">
             MacroHero is the workspace macro strategists, FX traders, and portfolio managers use to
@@ -137,7 +137,7 @@ export default function LandingPage() {
         </div>
       </Reveal>
 
-      <Reveal as="section" className="mx-auto max-w-6xl px-6 pb-24">
+      <Reveal as="section" className="mx-auto max-w-6xl px-4 sm:px-6 pb-24">
         <div id="features" className="mb-12">
           <span className="font-mono text-[11px] uppercase tracking-[0.22em] text-primary">
             Features
@@ -170,7 +170,7 @@ export default function LandingPage() {
         </div>
       </Reveal>
 
-      <Reveal as="section" className="mx-auto max-w-6xl px-6 pb-24">
+      <Reveal as="section" className="mx-auto max-w-6xl px-4 sm:px-6 pb-24">
         <div id="how-it-works" className="mb-12">
           <span className="font-mono text-[11px] uppercase tracking-[0.22em] text-primary">
             How it works
@@ -195,7 +195,7 @@ export default function LandingPage() {
         </div>
       </Reveal>
 
-      <Reveal as="section" className="mx-auto max-w-6xl px-6 pb-32">
+      <Reveal as="section" className="mx-auto max-w-6xl px-4 sm:px-6 pb-32">
         <div id="team" className="mb-12">
           <span className="font-mono text-[11px] uppercase tracking-[0.22em] text-primary">
             Team

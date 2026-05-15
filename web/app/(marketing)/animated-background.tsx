@@ -2,14 +2,26 @@
 
 import { useEffect, useRef } from "react";
 
-const COUNT = 120;
-const LINK_DISTANCE = 145;
 const MAX_SPEED = 0.32;
 const NODE_RADIUS = 2;
 const PULSE_NODE_RATIO = 0.16;
-const WAVE_POINTS = 72;
-const WAVE_AMPLITUDE = 26;
 const WAVE_DRIFT_SPEED = 0.007;
+
+// Density scales with viewport: at 375px we want ~35 nodes, at 1440px ~120.
+// The pairwise link loop is O(n²), so dropping the count on mobile is both a
+// visual and performance win.
+function densityFor(width: number) {
+  if (width < 480) {
+    return { count: 32, linkDistance: 95, wavePoints: 28, waveAmplitude: 14 };
+  }
+  if (width < 768) {
+    return { count: 60, linkDistance: 115, wavePoints: 44, waveAmplitude: 18 };
+  }
+  if (width < 1280) {
+    return { count: 90, linkDistance: 135, wavePoints: 60, waveAmplitude: 22 };
+  }
+  return { count: 120, linkDistance: 145, wavePoints: 72, waveAmplitude: 26 };
+}
 
 type Tone = "cool" | "warm" | "neutral";
 
@@ -54,6 +66,7 @@ export function AnimatedBackground() {
     let width = 0;
     let height = 0;
     let nodes: Node[] = [];
+    let density = densityFor(window.innerWidth);
     let raf = 0;
     let alive = true;
     let frame = 0;
@@ -67,12 +80,13 @@ export function AnimatedBackground() {
       canvas.width = Math.floor(width * dpr);
       canvas.height = Math.floor(height * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      density = densityFor(width);
     };
 
     const seed = () => {
       nodes = [];
       const pulseEvery = Math.max(1, Math.floor(1 / PULSE_NODE_RATIO));
-      for (let i = 0; i < COUNT; i++) {
+      for (let i = 0; i < density.count; i++) {
         nodes.push({
           x: Math.random() * width,
           y: Math.random() * height,
@@ -92,15 +106,15 @@ export function AnimatedBackground() {
 
     const drawWave = () => {
       const y0 = height - 60;
-      const step = width / (WAVE_POINTS - 1);
+      const step = width / (density.wavePoints - 1);
       ctx.beginPath();
-      for (let i = 0; i < WAVE_POINTS; i++) {
+      for (let i = 0; i < density.wavePoints; i++) {
         const x = i * step;
         const t = frame * WAVE_DRIFT_SPEED + i * 0.35;
         const y =
           y0 +
-          Math.sin(t) * WAVE_AMPLITUDE * 0.6 +
-          Math.sin(t * 1.7) * WAVE_AMPLITUDE * 0.4;
+          Math.sin(t) * density.waveAmplitude * 0.6 +
+          Math.sin(t * 1.7) * density.waveAmplitude * 0.4;
         if (i === 0) ctx.moveTo(x, y);
         else ctx.lineTo(x, y);
       }
@@ -124,6 +138,8 @@ export function AnimatedBackground() {
         }
       }
 
+      const linkDist = density.linkDistance;
+      const linkDist2 = linkDist * linkDist;
       for (let i = 0; i < nodes.length; i++) {
         const a = nodes[i];
         for (let j = i + 1; j < nodes.length; j++) {
@@ -131,8 +147,8 @@ export function AnimatedBackground() {
           const dx = a.x - b.x;
           const dy = a.y - b.y;
           const d2 = dx * dx + dy * dy;
-          if (d2 > LINK_DISTANCE * LINK_DISTANCE) continue;
-          const t = 1 - Math.sqrt(d2) / LINK_DISTANCE;
+          if (d2 > linkDist2) continue;
+          const t = 1 - Math.sqrt(d2) / linkDist;
           ctx.strokeStyle = linkColor(a.tone, b.tone, t * 0.45);
           ctx.lineWidth = 1;
           ctx.beginPath();

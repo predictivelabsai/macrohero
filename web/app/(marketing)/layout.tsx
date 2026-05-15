@@ -1,13 +1,14 @@
 import Link from "next/link";
 
 import { AnimatedBackground } from "./animated-background";
+import { MarketingMobileNav } from "./marketing-mobile-nav";
 
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="relative flex min-h-screen flex-col">
       <AnimatedBackground />
       <header className="sticky top-0 z-20 border-b border-border/40 bg-background/50 backdrop-blur">
-        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-6">
+        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:px-6">
           <Link href="/chat" className="flex items-center gap-2 font-mono text-sm font-semibold tracking-tight">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" className="h-5 w-5">
               <rect width="32" height="32" rx="6" fill="#0f172a" />
@@ -36,11 +37,12 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
               Team
             </a>
           </nav>
+          <MarketingMobileNav />
         </div>
       </header>
       <main className="relative z-10 flex-1">{children}</main>
       <footer className="relative z-10 border-t border-border/40 bg-background py-8">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 text-sm text-muted-foreground">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 text-sm text-muted-foreground sm:px-6">
           <span>© {new Date().getFullYear()} MacroHero</span>
         </div>
       </footer>
