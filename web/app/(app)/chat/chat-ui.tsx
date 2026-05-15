@@ -192,7 +192,12 @@ export function ChatUI({
 
   return (
     <div className="flex h-full flex-col">
-      <div ref={scrollerRef} className="flex-1 overflow-y-auto">
+      {/* scrollbar-gutter:stable always reserves the 10px gutter (matches
+          our ::-webkit-scrollbar width in globals.css). Paired with pr-[10px]
+          on the composer wrapper below so the centered max-w-3xl content in
+          both panes aligns on the left and right edges regardless of whether
+          a scrollbar is currently visible. */}
+      <div ref={scrollerRef} className="flex-1 overflow-y-auto [scrollbar-gutter:stable]">
         <div className="mx-auto w-full max-w-3xl px-6 py-6">
           {empty ? (
             <EmptyState
@@ -218,7 +223,7 @@ export function ChatUI({
         </div>
       </div>
 
-      <div className="border-t border-border/40 bg-background/40 backdrop-blur">
+      <div className="border-t border-border/40 bg-background/40 pr-[10px] backdrop-blur">
         <div className="mx-auto w-full max-w-3xl px-6 py-4">
           {/* Unified composer surface — textarea sits flat inside a single
               rounded card; focus glow lives on the wrapper, not the input,
