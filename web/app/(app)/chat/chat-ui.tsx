@@ -318,6 +318,16 @@ function MessageBubble({
     );
   }
 
+  return <AssistantBubble message={message} isStreaming={isStreaming} />;
+}
+
+function AssistantBubble({
+  message,
+  isStreaming,
+}: {
+  message: UIMessage;
+  isStreaming: boolean;
+}) {
   type AnyPart = {
     type: string;
     text?: string;
@@ -333,7 +343,31 @@ function MessageBubble({
       p.type === "data-scenario_projection" ||
       p.type.startsWith("tool-"),
   );
-  const showDotsPlaceholder = isStreaming && renderedParts.length === 0;
+
+  // Idle detector: when streaming but nothing new has arrived for ~700ms,
+  // show a Dots placeholder under the last text/reasoning part. This fills
+  // the gap when the model has stopped emitting prose and is silently
+  // streaming tool-call args (before the tool pill appears). The reset
+  // happens in the effect's cleanup so we don't call setState in the body.
+  const contentLen = message.parts.reduce((sum, p) => {
+    const text = (p as unknown as { text?: string }).text;
+    return sum + (typeof text === "string" ? text.length : 0);
+  }, 0);
+  const partsCount = message.parts.length;
+  const [idle, setIdle] = useState(false);
+  useEffect(() => {
+    if (!isStreaming) return undefined;
+    const t = setTimeout(() => setIdle(true), 700);
+    return () => {
+      clearTimeout(t);
+      setIdle((curr) => (curr ? false : curr));
+    };
+  }, [isStreaming, contentLen, partsCount]);
+
+  const lastPart = renderedParts[renderedParts.length - 1];
+  const lastIsProse = lastPart?.type === "text" || lastPart?.type === "reasoning";
+  const showDotsPlaceholder =
+    isStreaming && (renderedParts.length === 0 || (idle && lastIsProse));
 
   return (
     <div className="flex justify-start">
