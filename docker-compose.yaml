@@ -2,7 +2,7 @@
 #
 # Coolify uses Traefik as the reverse proxy. Services listen internally
 # on `expose:` ports; Traefik routes the generated FQDNs to them.
-# Set Build Pack = "Docker Compose" and Compose File = "docker-compose.coolify.yml"
+# Set Build Pack = "Docker Compose" and Compose File = "docker-compose.yaml"
 # in the Coolify application settings.
 #
 # Magic vars (Coolify fills these automatically):
@@ -53,8 +53,8 @@ services:
         NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
         NEXT_PUBLIC_CLERK_SIGN_IN_URL: ${NEXT_PUBLIC_CLERK_SIGN_IN_URL:-/sign-in}
         NEXT_PUBLIC_CLERK_SIGN_UP_URL: ${NEXT_PUBLIC_CLERK_SIGN_UP_URL:-/sign-up}
-        NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL: ${NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL:-/dashboard}
-        NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL: ${NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL:-/dashboard}
+        NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL: ${NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL:-/chat}
+        NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL: ${NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL:-/chat}
         NEXT_PUBLIC_API_URL: ${SERVICE_URL_API_8000}
     environment:
       - SERVICE_FQDN_WEB_3000
