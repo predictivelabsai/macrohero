@@ -192,13 +192,18 @@ export function ChatUI({
 
   return (
     <div className="flex h-full flex-col">
-      {/* scrollbar-gutter:stable always reserves the 10px gutter (matches
-          our ::-webkit-scrollbar width in globals.css). Paired with pr-[10px]
-          on the composer wrapper below so the centered max-w-3xl content in
-          both panes aligns on the left and right edges regardless of whether
-          a scrollbar is currently visible. */}
-      <div ref={scrollerRef} className="flex-1 overflow-y-auto [scrollbar-gutter:stable]">
-        <div className="mx-auto w-full max-w-3xl px-6 py-6">
+      {/* scrollbar-gutter:stable reserves the 10px gutter on desktop (matches
+          our ::-webkit-scrollbar width in globals.css), paired with sm:pr-[10px]
+          on the composer wrapper below so max-w-3xl content aligns on both
+          edges regardless of whether the scrollbar is currently visible. On
+          mobile the scrollbar is an overlay (zero width), so we drop the
+          gutter and the matching pr — otherwise the composer ends 10px shy
+          of the message bubbles' right edge. */}
+      <div
+        ref={scrollerRef}
+        className="flex-1 overflow-y-auto sm:[scrollbar-gutter:stable]"
+      >
+        <div className="mx-auto w-full max-w-3xl px-4 py-4 sm:px-6 sm:py-6">
           {empty ? (
             <EmptyState
               onPick={(text) => sendMessage({ text })}
@@ -223,8 +228,8 @@ export function ChatUI({
         </div>
       </div>
 
-      <div className="border-t border-border/40 bg-background/40 pr-[10px] backdrop-blur">
-        <div className="mx-auto w-full max-w-3xl px-6 py-4">
+      <div className="border-t border-border/40 bg-background/40 backdrop-blur sm:pr-[10px]">
+        <div className="mx-auto w-full max-w-3xl px-4 py-3 sm:px-6 sm:py-4">
           {/* Unified composer surface — textarea sits flat inside a single
               rounded card; focus glow lives on the wrapper, not the input,
               so we don't get a clashing inner ring on top of an outer

@@ -11,11 +11,11 @@ export default async function ThreadsPage() {
   const sessions = await listSessions();
 
   return (
-    <div className="h-full overflow-y-auto px-6 py-8">
+    <div className="h-full overflow-y-auto px-4 py-6 sm:px-6 sm:py-8">
       <div className="mx-auto max-w-3xl space-y-6">
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 className="text-3xl font-semibold tracking-tight">Threads</h1>
+            <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Threads</h1>
             <p className="mt-1 text-sm text-muted-foreground">
               All your conversations.
             </p>

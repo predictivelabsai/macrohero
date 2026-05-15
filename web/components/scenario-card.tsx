@@ -102,11 +102,11 @@ export function ScenarioCard({ data }: { data: ProjectionResult }) {
 
   return (
     <Card className="bg-background">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+      <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 space-y-0 pb-2">
         <CardTitle className="text-base">
           {pair} · {horizon_days}-day scenario
         </CardTitle>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Badge variant="outline" className={fitToneClass}>
             {fit.label}
           </Badge>
@@ -121,7 +121,7 @@ export function ScenarioCard({ data }: { data: ProjectionResult }) {
 
       <CardContent className="space-y-4">
         <div>
-          <div className={`text-3xl font-semibold ${directionClass}`}>{formatPct(point)}</div>
+          <div className={`text-2xl font-semibold sm:text-3xl ${directionClass}`}>{formatPct(point)}</div>
           <div className="text-sm text-muted-foreground">
             {formatPrice(projection.spot_at_t0)} → {formatPrice(projection.projected_spot)}
           </div>
