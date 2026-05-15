@@ -7,10 +7,12 @@ import { useState, useTransition } from "react";
 import { cn } from "@/lib/utils";
 import type { ChatSessionSummary } from "@/lib/chat";
 
+import { useAppChrome } from "./app-chrome";
 import { deleteSessionAction } from "./chat/actions";
 
 export function AppSidebar({ sessions }: { sessions: ChatSessionSummary[] }) {
   const pathname = usePathname();
+  const { sidebarOpen, closeSidebar } = useAppChrome();
   const currentSessionId = pathname.startsWith("/chat/") ? pathname.split("/")[2] : null;
   const onChatHome = pathname === "/chat";
   const onThreads = pathname.startsWith("/threads");
@@ -19,8 +21,8 @@ export function AppSidebar({ sessions }: { sessions: ChatSessionSummary[] }) {
   // Expanded by default so chat history is discoverable; user can collapse.
   const [threadsExpanded, setThreadsExpanded] = useState(true);
 
-  return (
-    <aside className="flex h-full w-64 shrink-0 flex-col border-r border-border bg-sidebar/40">
+  const body = (
+    <>
       <div className="flex flex-col gap-0.5 px-2 pt-3">
         <NavLink icon={<HomeIcon />} label="Home" href="/chat" active={onChatHome} />
         <ThreadsRow
@@ -47,7 +49,67 @@ export function AppSidebar({ sessions }: { sessions: ChatSessionSummary[] }) {
       <div className="flex flex-col gap-0.5 border-t border-border px-2 py-2">
         <NavLink icon={<SettingsIcon />} label="Settings" href="/settings" active={onSettings} />
       </div>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* Desktop rail — fixed width, part of the flex row. */}
+      <aside className="hidden h-full w-64 shrink-0 flex-col border-r border-border bg-sidebar/40 md:flex">
+        {body}
+      </aside>
+
+      {/* Mobile drawer — slides in from the left. Animates on the `open`
+          attribute; we render the aside even when closed (translated off-screen)
+          so the transition runs in both directions. The backdrop is rendered
+          conditionally and uses its own fade. */}
+      {sidebarOpen && (
+        <div
+          onClick={closeSidebar}
+          className="fixed inset-0 z-40 bg-background/70 backdrop-blur-sm transition-opacity duration-200 md:hidden"
+          aria-hidden="true"
+        />
+      )}
+      <aside
+        className={cn(
+          "fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85%] flex-col border-r border-border bg-sidebar shadow-2xl transition-transform duration-200 md:hidden",
+          sidebarOpen ? "translate-x-0" : "-translate-x-full",
+        )}
+        aria-hidden={!sidebarOpen}
+        onClick={(e) => {
+          // Close the drawer when the user taps a navigation link inside it.
+          if ((e.target as HTMLElement).closest("a[href]")) closeSidebar();
+        }}
+      >
+        <div className="flex h-14 shrink-0 items-center justify-between border-b border-border px-3">
+          <span className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
+            Menu
+          </span>
+          <button
+            type="button"
+            onClick={closeSidebar}
+            aria-label="Close menu"
+            className="flex h-9 w-9 items-center justify-center rounded-md text-foreground/80 transition-colors hover:bg-muted hover:text-foreground"
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M18 6 6 18" />
+              <path d="m6 6 12 12" />
+            </svg>
+          </button>
+        </div>
+        <div className="flex min-h-0 flex-1 flex-col">{body}</div>
+      </aside>
+    </>
   );
 }
 

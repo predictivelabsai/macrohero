@@ -2,7 +2,10 @@
 
 import { useEffect, useState } from "react";
 
+import { cn } from "@/lib/utils";
 import type { NewsItem } from "@/lib/news";
+
+import { useAppChrome } from "../app-chrome";
 
 type State =
   | { kind: "loading" }
@@ -11,6 +14,7 @@ type State =
 
 export function NewsPane() {
   const [state, setState] = useState<State>({ kind: "loading" });
+  const { newsOpen, closeNews } = useAppChrome();
 
   useEffect(() => {
     let cancelled = false;
@@ -34,21 +38,77 @@ export function NewsPane() {
     };
   }, []);
 
+  const header = (
+    <div className="border-b border-border px-4 py-3">
+      <h2 className="flex items-center gap-1.5 text-sm font-semibold tracking-tight">
+        <LiveNewsIcon />
+        Live news
+      </h2>
+      <p className="text-xs text-muted-foreground">Fed · ECB · BoE · FT</p>
+    </div>
+  );
+
+  const body = (
+    <div className="flex-1 overflow-y-auto">
+      {state.kind === "loading" && <LoadingState />}
+      {state.kind === "error" && <ErrorState message={state.message} />}
+      {state.kind === "ready" && <ItemList items={state.items} />}
+    </div>
+  );
+
   return (
-    <aside className="flex h-full w-80 shrink-0 flex-col border-l border-border bg-sidebar/40">
-      <div className="border-b border-border px-4 py-3">
-        <h2 className="flex items-center gap-1.5 text-sm font-semibold tracking-tight">
-          <LiveNewsIcon />
-          Live news
-        </h2>
-        <p className="text-xs text-muted-foreground">Fed · ECB · BoE · FT</p>
-      </div>
-      <div className="flex-1 overflow-y-auto">
-        {state.kind === "loading" && <LoadingState />}
-        {state.kind === "error" && <ErrorState message={state.message} />}
-        {state.kind === "ready" && <ItemList items={state.items} />}
-      </div>
-    </aside>
+    <>
+      {/* Desktop rail — fixed width on the right. */}
+      <aside className="hidden h-full w-80 shrink-0 flex-col border-l border-border bg-sidebar/40 md:flex">
+        {header}
+        {body}
+      </aside>
+
+      {/* Mobile drawer — slides in from the right. */}
+      {newsOpen && (
+        <div
+          onClick={closeNews}
+          className="fixed inset-0 z-40 bg-background/70 backdrop-blur-sm md:hidden"
+          aria-hidden="true"
+        />
+      )}
+      <aside
+        className={cn(
+          "fixed inset-y-0 right-0 z-50 flex w-80 max-w-[85%] flex-col border-l border-border bg-sidebar shadow-2xl transition-transform duration-200 md:hidden",
+          newsOpen ? "translate-x-0" : "translate-x-full",
+        )}
+        aria-hidden={!newsOpen}
+      >
+        <div className="flex h-14 shrink-0 items-center justify-between border-b border-border px-3">
+          <span className="flex items-center gap-1.5 font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
+            <LiveNewsIcon />
+            Live news
+          </span>
+          <button
+            type="button"
+            onClick={closeNews}
+            aria-label="Close live news"
+            className="flex h-9 w-9 items-center justify-center rounded-md text-foreground/80 transition-colors hover:bg-muted hover:text-foreground"
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M18 6 6 18" />
+              <path d="m6 6 12 12" />
+            </svg>
+          </button>
+        </div>
+        {body}
+      </aside>
+    </>
   );
 }
 
