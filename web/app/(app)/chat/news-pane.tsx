@@ -58,23 +58,27 @@ export function NewsPane() {
 
   return (
     <>
-      {/* Desktop rail — fixed width on the right. */}
-      <aside className="hidden h-full w-80 shrink-0 flex-col border-l border-border bg-sidebar/40 md:flex">
+      {/* Desktop rail — fixed width on the right. Visible at xl (1280px) and
+          up. Below xl (including iPad landscape and small laptops) the news
+          pane is a drawer to reserve the full chat width — 256px sidebar +
+          320px news pane on a 1024px iPad leaves only 448px for chat, which
+          is too cramped for long-form assistant replies. */}
+      <aside className="hidden h-full w-80 shrink-0 flex-col border-l border-border bg-sidebar/40 xl:flex">
         {header}
         {body}
       </aside>
 
-      {/* Mobile drawer — slides in from the right. */}
+      {/* Mobile/tablet drawer — slides in from the right. */}
       {newsOpen && (
         <div
           onClick={closeNews}
-          className="fixed inset-0 z-40 bg-background/70 backdrop-blur-sm md:hidden"
+          className="fixed inset-0 z-40 bg-background/70 backdrop-blur-sm xl:hidden"
           aria-hidden="true"
         />
       )}
       <aside
         className={cn(
-          "fixed inset-y-0 right-0 z-50 flex w-80 max-w-[85%] flex-col border-l border-border bg-sidebar shadow-2xl transition-transform duration-200 md:hidden",
+          "fixed inset-y-0 right-0 z-50 flex w-80 max-w-[85%] flex-col border-l border-border bg-sidebar shadow-2xl transition-transform duration-200 xl:hidden",
           newsOpen ? "translate-x-0" : "translate-x-full",
         )}
         aria-hidden={!newsOpen}

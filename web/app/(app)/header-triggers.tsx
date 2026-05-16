@@ -12,7 +12,7 @@ export function MobileSidebarTrigger() {
       onClick={toggleSidebar}
       aria-label={sidebarOpen ? "Close menu" : "Open menu"}
       aria-expanded={sidebarOpen}
-      className="-ml-1 flex h-9 w-9 items-center justify-center rounded-md text-foreground/80 transition-colors hover:bg-muted hover:text-foreground md:hidden"
+      className="-ml-1 flex h-9 w-9 items-center justify-center rounded-md text-foreground/80 transition-colors hover:bg-muted hover:text-foreground lg:hidden"
     >
       <svg
         width="20"
@@ -44,7 +44,7 @@ export function MobileNewsTrigger() {
       onClick={toggleNews}
       aria-label={newsOpen ? "Close live news" : "Open live news"}
       aria-expanded={newsOpen}
-      className="flex h-9 w-9 items-center justify-center rounded-md text-foreground/80 transition-colors hover:bg-muted hover:text-foreground md:hidden"
+      className="flex h-9 w-9 items-center justify-center rounded-md text-foreground/80 transition-colors hover:bg-muted hover:text-foreground xl:hidden"
     >
       <svg
         width="18"

@@ -30,6 +30,31 @@ export function AppChromeProvider({ children }: { children: React.ReactNode }) {
     };
   }, [sidebarOpen, newsOpen]);
 
+  // When the viewport grows past a drawer's breakpoint the drawer turns into a
+  // permanent rail (sidebar at lg/1024, news at xl/1280) and CSS hides the
+  // drawer element. The open state would otherwise stay `true`, leaving the
+  // body scroll-locked. Reset it on the matchMedia change so the lock effect
+  // above re-runs and releases.
+  useEffect(() => {
+    const mql = window.matchMedia("(min-width: 1024px)");
+    const handler = () => {
+      if (mql.matches) setSidebarOpen(false);
+    };
+    handler();
+    mql.addEventListener("change", handler);
+    return () => mql.removeEventListener("change", handler);
+  }, []);
+
+  useEffect(() => {
+    const mql = window.matchMedia("(min-width: 1280px)");
+    const handler = () => {
+      if (mql.matches) setNewsOpen(false);
+    };
+    handler();
+    mql.addEventListener("change", handler);
+    return () => mql.removeEventListener("change", handler);
+  }, []);
+
   // Close on Escape.
   useEffect(() => {
     if (!sidebarOpen && !newsOpen) return;

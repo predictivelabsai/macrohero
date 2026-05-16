@@ -54,25 +54,28 @@ export function AppSidebar({ sessions }: { sessions: ChatSessionSummary[] }) {
 
   return (
     <>
-      {/* Desktop rail — fixed width, part of the flex row. */}
-      <aside className="hidden h-full w-64 shrink-0 flex-col border-r border-border bg-sidebar/40 md:flex">
+      {/* Desktop rail — fixed width, part of the flex row. Visible at lg (1024px)
+          and up; below that the rail hides and the drawer takes over. iPad
+          portrait (768–834px) and iPad Mini fall under lg, so chat content
+          gets the full viewport without a 256px sidebar eating into it. */}
+      <aside className="hidden h-full w-64 shrink-0 flex-col border-r border-border bg-sidebar/40 lg:flex">
         {body}
       </aside>
 
-      {/* Mobile drawer — slides in from the left. Animates on the `open`
+      {/* Mobile/tablet drawer — slides in from the left. Animates on the `open`
           attribute; we render the aside even when closed (translated off-screen)
           so the transition runs in both directions. The backdrop is rendered
           conditionally and uses its own fade. */}
       {sidebarOpen && (
         <div
           onClick={closeSidebar}
-          className="fixed inset-0 z-40 bg-background/70 backdrop-blur-sm transition-opacity duration-200 md:hidden"
+          className="fixed inset-0 z-40 bg-background/70 backdrop-blur-sm transition-opacity duration-200 lg:hidden"
           aria-hidden="true"
         />
       )}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85%] flex-col border-r border-border bg-sidebar shadow-2xl transition-transform duration-200 md:hidden",
+          "fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85%] flex-col border-r border-border bg-sidebar shadow-2xl transition-transform duration-200 lg:hidden",
           sidebarOpen ? "translate-x-0" : "-translate-x-full",
         )}
         aria-hidden={!sidebarOpen}
