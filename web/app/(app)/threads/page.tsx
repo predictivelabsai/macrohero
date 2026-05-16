@@ -12,7 +12,10 @@ export default async function ThreadsPage() {
 
   return (
     <div className="h-full overflow-y-auto px-4 py-6 sm:px-6 sm:py-8">
-      <div className="mx-auto max-w-3xl space-y-6">
+      {/* No max-width: the list fills whatever the chat-shell hands us. Each
+          row's title relies on CSS `truncate` to ellipse only when the row is
+          actually too narrow — long titles render in full whenever they fit. */}
+      <div className="space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Threads</h1>

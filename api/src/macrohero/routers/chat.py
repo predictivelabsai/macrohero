@@ -17,7 +17,9 @@ The streaming endpoint:
 4. persists the resulting assistant turn (text + action list) at the end.
 """
 
+import asyncio
 import json
+import logging
 from collections.abc import AsyncIterator
 from typing import Annotated
 from uuid import UUID
@@ -30,8 +32,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from macrohero.auth.clerk import current_user_id
 from macrohero.chat.agent import stream_chat
+from macrohero.chat.title import summarize_title
 from macrohero.db.models import ChatMessage, ChatSession, User
-from macrohero.db.session import get_db
+from macrohero.db.session import get_db, make_session
 from macrohero.schemas.chat import (
     ChatAction,
     ChatMessageSchema,
@@ -39,6 +42,8 @@ from macrohero.schemas.chat import (
     ChatSessionSummary,
     SendMessageRequest,
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -137,11 +142,56 @@ async def delete_session(
     await db.commit()
 
 
-def _truncate_title(content: str, limit: int = 60) -> str:
+# DB column is String(200). The LLM summarizer caps its own output to the
+# same value; this helper caps the placeholder we write synchronously while
+# waiting for the summarizer to come back.
+_TITLE_HARD_CAP = 200
+
+
+def _initial_title(content: str) -> str:
+    """Cheap, synchronous placeholder title — the first chunk of the user's
+    message, whitespace-collapsed, hard-cut to the column cap. Replaced by
+    the LLM-generated title shortly after via the background task scheduled
+    in `_spawn_title_summary`."""
     cleaned = " ".join(content.split())
-    if len(cleaned) <= limit:
-        return cleaned or "New chat"
-    return cleaned[: limit - 1].rstrip() + "…"
+    if not cleaned:
+        return "New chat"
+    return cleaned[:_TITLE_HARD_CAP].rstrip()
+
+
+# Strong references to fire-and-forget title-summary tasks so the event loop's
+# garbage collector doesn't cancel them mid-flight. The done callback discards
+# the task once it finishes (successfully or not).
+_TITLE_TASKS: set[asyncio.Task[str | None]] = set()
+
+
+async def _refine_session_title(session_id: UUID, content: str) -> str | None:
+    """Background task: call the LLM summarizer and overwrite the placeholder
+    title. Opens its own DB session because the request's session is closed by
+    the time the streaming response finishes. Returns the new title on success
+    (so the streaming endpoint can relay it to the client) or ``None`` if no
+    update happened — summarizer error, missing row, DB failure, etc."""
+    title = await summarize_title(content)
+    if title is None:
+        return None
+    try:
+        async with make_session() as db:
+            session = await db.get(ChatSession, session_id)
+            if session is None:
+                return None
+            session.title = title
+            await db.commit()
+            return title
+    except Exception:
+        logger.exception("title refinement failed to persist for session %s", session_id)
+        return None
+
+
+def _spawn_title_summary(session_id: UUID, content: str) -> asyncio.Task[str | None]:
+    task = asyncio.create_task(_refine_session_title(session_id, content))
+    _TITLE_TASKS.add(task)
+    task.add_done_callback(_TITLE_TASKS.discard)
+    return task
 
 
 def _format_sse(payload: dict) -> bytes:
@@ -168,30 +218,93 @@ async def _stream_and_persist_assistant_turn(
     assistant_ordinal: int,
     history: list[dict[str, str]],
     prelude: list[dict] | None = None,
+    title_task: asyncio.Task[str | None] | None = None,
 ) -> AsyncIterator[bytes]:
     """Run one ReAct turn, relay AI SDK chunks as SSE, then persist the
     assistant message. ``prelude`` is a list of dicts to emit before the
-    agent starts (used by /chat/start to surface the new session id)."""
+    agent starts (used by /chat/start to surface the new session id).
+    ``title_task``, if given, is the background LLM title summarizer the
+    caller scheduled when this turn is the first user message.
+
+    Agent events and the eventual title-update event are merged through a
+    single asyncio.Queue so the sidebar refresh fires the moment the
+    summarizer finishes — typically mid-stream, since the flash summarizer
+    is much faster than the agent's full reply."""
     final_text = ""
     final_reasoning = ""
     final_actions: list[dict] = []
     final_parts: list[dict] = []
+    agent_errored = False
 
     if prelude:
         for evt in prelude:
             yield _format_sse(evt)
 
-    try:
-        async for evt in stream_chat(user_id=user_id, db=db, messages=history):
-            if evt.get("type") == "_final":
-                final_text = evt.get("text", "")
-                final_reasoning = evt.get("reasoning", "")
-                final_actions = evt.get("actions", [])
-                final_parts = evt.get("parts", [])
-                continue
-            yield _format_sse(evt)
-    except Exception as exc:
-        yield _format_sse({"type": "error", "errorText": f"Chat agent error: {exc}"})
+    # `("evt", payload)` items get yielded to the client; `("done", source)`
+    # items tell the consumer that one producer has finished. The consumer
+    # loop exits when both expected producers have signalled done.
+    queue: asyncio.Queue[tuple[str, object]] = asyncio.Queue()
+
+    async def _produce_agent() -> None:
+        nonlocal final_text, final_reasoning, final_actions, final_parts, agent_errored
+        try:
+            async for evt in stream_chat(user_id=user_id, db=db, messages=history):
+                if evt.get("type") == "_final":
+                    final_text = evt.get("text", "")
+                    final_reasoning = evt.get("reasoning", "")
+                    final_actions = evt.get("actions", [])
+                    final_parts = evt.get("parts", [])
+                    continue
+                await queue.put(("evt", evt))
+        except Exception as exc:
+            agent_errored = True
+            await queue.put(("evt", {"type": "error", "errorText": f"Chat agent error: {exc}"}))
+        finally:
+            await queue.put(("done", "agent"))
+
+    async def _produce_title_update() -> None:
+        # Shield so a wait_for timeout doesn't cancel the still-useful
+        # background task (it stays alive in _TITLE_TASKS and finishes,
+        # writing to the DB on its own — we just give up surfacing the
+        # event to this particular client).
+        try:
+            new_title = await asyncio.wait_for(asyncio.shield(title_task), timeout=20)  # type: ignore[arg-type]
+        except (TimeoutError, Exception):
+            new_title = None
+        if new_title is not None:
+            await queue.put(
+                (
+                    "evt",
+                    {
+                        "type": "data-session-update",
+                        "id": f"sess_update_{session.id}",
+                        "data": {"sessionId": str(session.id), "title": new_title},
+                        "transient": True,
+                    },
+                )
+            )
+        await queue.put(("done", "title"))
+
+    pending: set[str] = {"agent"}
+    agent_pump = asyncio.create_task(_produce_agent())
+    title_pump: asyncio.Task[None] | None = None
+    if title_task is not None:
+        pending.add("title")
+        title_pump = asyncio.create_task(_produce_title_update())
+
+    while pending:
+        kind, payload = await queue.get()
+        if kind == "done":
+            pending.discard(payload)  # type: ignore[arg-type]
+        else:
+            yield _format_sse(payload)  # type: ignore[arg-type]
+
+    # Surface any exceptions raised by the pumps so they aren't swallowed.
+    await agent_pump
+    if title_pump is not None:
+        await title_pump
+
+    if agent_errored:
         yield b"data: [DONE]\n\n"
         return
 
@@ -237,12 +350,18 @@ async def send_message(
     )
     db.add(user_msg)
 
-    # First user message becomes the session title.
+    # First user message becomes the session title: write a fast placeholder
+    # synchronously, then spawn a background LLM summarizer that will overwrite
+    # it with a proper title once the response below has started streaming.
     is_first_user_message = next_ordinal == 0
     if is_first_user_message:
-        session.title = _truncate_title(payload.content)
+        session.title = _initial_title(payload.content)
 
     await db.commit()
+
+    title_task = (
+        _spawn_title_summary(session_id, payload.content) if is_first_user_message else None
+    )
 
     history_stmt = (
         select(ChatMessage)
@@ -259,6 +378,7 @@ async def send_message(
             session=session,
             assistant_ordinal=next_ordinal + 1,
             history=history,
+            title_task=title_task,
         )
     )
 
@@ -275,7 +395,7 @@ async def start_session(
     the UI can switch the URL to ``/chat/{id}`` afterwards."""
     await _ensure_user(db, user_id)
 
-    title = _truncate_title(payload.content)
+    title = _initial_title(payload.content)
     session = ChatSession(user_id=user_id, title=title)
     db.add(session)
     await db.flush()  # populate session.id without committing yet
@@ -289,6 +409,8 @@ async def start_session(
     )
     db.add(user_msg)
     await db.commit()
+
+    title_task = _spawn_title_summary(session.id, payload.content)
 
     history = [{"role": "user", "content": payload.content}]
     prelude = [
@@ -308,5 +430,6 @@ async def start_session(
             assistant_ordinal=1,
             history=history,
             prelude=prelude,
+            title_task=title_task,
         )
     )

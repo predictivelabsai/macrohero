@@ -6,6 +6,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _API_ROOT = Path(__file__).resolve().parent.parent.parent
 _DEFAULT_CACHE_DIR = str(_API_ROOT / ".cache" / "massive")
+# Absolute path so scripts and tests resolve the env file regardless of CWD —
+# `env_file=".env"` was only finding it when invoked from api/.
+_ENV_FILE = str(_API_ROOT / ".env")
 
 
 def _ensure_async_driver(url: str) -> str:
@@ -25,7 +28,7 @@ def _ensure_async_driver(url: str) -> str:
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    model_config = SettingsConfigDict(env_file=_ENV_FILE, env_file_encoding="utf-8", extra="ignore")
 
     database_url: str = Field(..., alias="DATABASE_URL")
 
@@ -45,6 +48,12 @@ class Settings(BaseSettings):
     # rest of the API without one.
     deepseek_api_key: str = Field(default="", alias="DEEPSEEK_API_KEY")
     deepseek_model: str = Field(default="deepseek-v4-pro", alias="DEEPSEEK_MODEL")
+    # A smaller/cheaper sibling of `deepseek_model`. Used for short auxiliary
+    # completions (e.g. chat-session title summarization) where the pro model's
+    # reasoning depth isn't worth the latency or cost.
+    deepseek_flash_model: str = Field(
+        default="deepseek-v4-flash", alias="DEEPSEEK_FLASH_MODEL"
+    )
     deepseek_base_url: str = Field(default="https://api.deepseek.com/v1", alias="DEEPSEEK_BASE_URL")
 
     # Massive market data API (https://api.massive.com)

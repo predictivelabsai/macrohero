@@ -150,20 +150,33 @@ export function ChatUI({
     transport,
     onData: (part) => {
       if (part.type === "data-session") {
+        // Capture the new session id but DON'T refresh yet — a refresh here
+        // would pull the placeholder title into the sidebar before the LLM
+        // summarizer has had a chance to overwrite it. The sidebar refresh
+        // is deferred to `data-session-update` (or `onFinish` as fallback)
+        // so the first time the new entry appears it already has the proper
+        // summarized title.
         const data = part.data as { sessionId?: string } | undefined;
         if (data?.sessionId) {
           sessionIdRef.current = data.sessionId;
-          router.refresh();
         }
+      } else if (part.type === "data-session-update") {
+        // Emitted by the backend once the LLM title summarizer finishes
+        // (near the end of the assistant turn). The new title is already
+        // persisted; we just need to re-render the sidebar.
+        router.refresh();
       }
     },
     onFinish: () => {
       const currentId = sessionIdRef.current;
       if (currentId && currentId !== sessionId) {
         router.replace(`/chat/${currentId}`, { scroll: false });
-      } else {
-        router.refresh();
       }
+      // Always refresh — picks up the LLM-summarized title in the sidebar
+      // when the summarizer succeeded but `data-session-update` hasn't yet
+      // fired (rare race), and also ensures the sidebar shows the new chat
+      // entry when the summarizer failed and no update event was emitted.
+      router.refresh();
     },
   });
 
