@@ -1,0 +1,3 @@
+# Numerics service local artifacts. Root .gitignore already covers
+# __pycache__/, *.py[cod], .venv/, .pytest_cache/, .ruff_cache/, .env.
+.cache/
