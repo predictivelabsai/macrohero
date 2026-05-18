@@ -22,7 +22,7 @@ async function* asAsyncIter<T>(items: T[]): AsyncIterable<T> {
 function makeWriter(): { writer: StreamWriter; writes: Array<Record<string, unknown>> } {
   const writes: Array<Record<string, unknown>> = [];
   const writer: StreamWriter = {
-    writeData: (data) => {
+    write: (data) => {
       writes.push(data as Record<string, unknown>);
     },
   };

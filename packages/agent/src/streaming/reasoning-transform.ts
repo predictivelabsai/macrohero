@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 export interface StreamWriter {
-  writeData(data: Record<string, unknown>): void;
+  write(chunk: Record<string, unknown>): void;
 }
 
 export interface LangGraphEvent {
@@ -40,9 +40,9 @@ export async function* transformLangGraphEvents(
       if (typeof reasoning === "string" && reasoning.length > 0) {
         if (!reasoningId) {
           reasoningId = shortId("think");
-          writer.writeData({ type: "reasoning-start", id: reasoningId });
+          writer.write({ type: "reasoning-start", id: reasoningId });
         }
-        writer.writeData({
+        writer.write({
           type: "reasoning-delta",
           id: reasoningId,
           delta: reasoning,
@@ -51,7 +51,7 @@ export async function* transformLangGraphEvents(
     }
 
     if (event.event === "on_tool_end" && event.name === "run_factor_projection") {
-      writer.writeData({
+      writer.write({
         type: "data-scenario_projection",
         id: shortId("proj"),
         data: event.data?.output,
@@ -63,6 +63,6 @@ export async function* transformLangGraphEvents(
   }
 
   if (reasoningId) {
-    writer.writeData({ type: "reasoning-end", id: reasoningId });
+    writer.write({ type: "reasoning-end", id: reasoningId });
   }
 }
