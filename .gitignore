@@ -1,3 +1,6 @@
+# Monorepo: web app under apps/web/, Python API still at api/.
+# Pattern-based ignores below apply at any directory depth.
+
 # Node / Next.js
 node_modules/
 .next/
