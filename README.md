@@ -5,9 +5,13 @@ MacroHero is a Clerk-authenticated web app with a FastAPI backend, Postgres pers
 ## Layout
 
 ```text
-web/   Next.js + Tailwind + Clerk (TypeScript)
-api/   FastAPI + SQLAlchemy 2.0 + Alembic (Python 3.12)
+apps/
+  web/    Next.js + Tailwind + Clerk (TypeScript)
+packages/ Shared TS packages (none yet; populated in later refactor phases)
+api/      FastAPI + SQLAlchemy 2.0 + Alembic (Python 3.12)
 ```
+
+pnpm workspaces; lockfile at root. The Python `api/` is not yet part of the workspace.
 
 ## Prerequisites
 
@@ -19,6 +23,8 @@ api/   FastAPI + SQLAlchemy 2.0 + Alembic (Python 3.12)
 
 ## Run Locally
 
+API (from repo root):
+
 ```bash
 cd api
 uv sync
@@ -26,9 +32,17 @@ uv run alembic upgrade head
 uv run uvicorn macrohero.main:app --reload --port 8000
 ```
 
+Web (from repo root):
+
 ```bash
-cd web
 pnpm install
+pnpm dev:web
+```
+
+Or directly:
+
+```bash
+cd apps/web
 pnpm dev
 ```
 
@@ -36,4 +50,4 @@ Frontend runs on http://localhost:3000. The API runs on http://localhost:8000.
 
 ## Environment
 
-Copy `.env.example` to `web/.env.local` and `api/.env`, then fill in the values for Clerk, Postgres, CORS, and DeepSeek.
+Copy `.env.example` to `apps/web/.env.local` and `api/.env`, then fill in the values for Clerk, Postgres, CORS, and DeepSeek.
