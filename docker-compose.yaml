@@ -46,6 +46,29 @@ services:
       start_period: 20s
     restart: unless-stopped
 
+  numerics:
+    build:
+      context: ./apps/numerics
+      dockerfile: Dockerfile
+    environment:
+      MASSIVE_API_KEY: ${MASSIVE_API_KEY}
+      MASSIVE_CACHE_DIR: /app/.cache/massive
+    expose:
+      - "8001"
+    volumes:
+      - numerics-cache:/app/.cache/massive
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8001/healthz', timeout=3).status==200 else 1)"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    restart: unless-stopped
+
   web:
     build:
       context: .
@@ -67,3 +90,6 @@ services:
       api:
         condition: service_healthy
     restart: unless-stopped
+
+volumes:
+  numerics-cache:
