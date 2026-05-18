@@ -1,0 +1,64 @@
+{
+  "input": {
+    "factors": [
+      {
+        "direction": "up",
+        "name": "VIX (volatility)",
+        "severity": "severe"
+      }
+    ],
+    "horizon_days": 30,
+    "pair": "USD/CHF",
+    "regression_window_days": 252
+  },
+  "output": {
+    "diagnostics": {
+      "condition_number": 27.951432046927817,
+      "error": null,
+      "max_vif": 1.0,
+      "n_observations": 251,
+      "residual_excess_kurtosis": 0.7471274161145054,
+      "residual_skewness": -0.5071575169269855,
+      "warnings": [
+        "low_r_squared",
+        "unstable_oos"
+      ]
+    },
+    "factors": [
+      {
+        "beta": -0.01223627899608361,
+        "ci_high": 0.013181905726592292,
+        "ci_low": -0.03765446371875951,
+        "contribution_pct": -0.4805135383367608,
+        "direction": "up",
+        "expected_change": 39.26958011422882,
+        "name": "VIX (volatility)",
+        "p_value": 0.34540410541423167,
+        "se": 0.012968461593201992,
+        "severity": "severe",
+        "sigma_multiple": 2.0,
+        "t_stat": -0.943541291165778,
+        "ticker": "VXX",
+        "unit": "%",
+        "vif": 1.0
+      }
+    ],
+    "horizon_days": 30,
+    "intercept": -0.0002982829642918178,
+    "pair": "USD/CHF",
+    "projection": {
+      "band_95_high_pct": 4.053705972216765,
+      "band_95_low_pct": -5.014733048890287,
+      "parameter_variance_pct2": 0.2593519010174868,
+      "point_pct": -0.4805135383367608,
+      "projected_spot": 0.7835069649640286,
+      "residual_variance_pct2": 5.092362637165627,
+      "spot_at_t0": 0.78729,
+      "spot_band_high": 0.8192044217486655,
+      "spot_band_low": 0.7478095081793917
+    },
+    "r_squared": 0.007947079314364891,
+    "regression_window_days": 252
+  },
+  "scenario_id": "scenario_14"
+}

@@ -1,0 +1,64 @@
+{
+  "input": {
+    "factors": [
+      {
+        "direction": "up",
+        "name": "WTI crude",
+        "severity": "moderate"
+      }
+    ],
+    "horizon_days": 30,
+    "pair": "AUD/USD",
+    "regression_window_days": 252
+  },
+  "output": {
+    "diagnostics": {
+      "condition_number": 36.63307740133706,
+      "error": null,
+      "max_vif": 1.0,
+      "n_observations": 251,
+      "residual_excess_kurtosis": 0.9624980028476098,
+      "residual_skewness": 0.22161193235620963,
+      "warnings": [
+        "low_r_squared",
+        "unstable_oos"
+      ]
+    },
+    "factors": [
+      {
+        "beta": -0.029691333037850084,
+        "ci_high": -0.00458032293677333,
+        "ci_low": -0.05480234313892684,
+        "contribution_pct": -0.44482349783638564,
+        "direction": "up",
+        "expected_change": 14.98159403181161,
+        "name": "WTI crude",
+        "p_value": 0.020475975791359097,
+        "se": 0.01281173984748814,
+        "severity": "moderate",
+        "sigma_multiple": 1.0,
+        "t_stat": -2.3175098301478037,
+        "ticker": "USO",
+        "unit": "%",
+        "vif": 1.0
+      }
+    ],
+    "horizon_days": 30,
+    "intercept": 0.0004844336743815218,
+    "pair": "AUD/USD",
+    "projection": {
+      "band_95_high_pct": 5.4106723265336285,
+      "band_95_low_pct": -6.300319322206399,
+      "parameter_variance_pct2": 0.0368410730965735,
+      "point_pct": -0.44482349783638564,
+      "projected_spot": 0.7097786308721754,
+      "residual_variance_pct2": 8.88830244762778,
+      "spot_at_t0": 0.71295,
+      "spot_band_high": 0.7515253883520214,
+      "spot_band_low": 0.6680318733923294
+    },
+    "r_squared": 0.023279607254028445,
+    "regression_window_days": 252
+  },
+  "scenario_id": "scenario_13"
+}

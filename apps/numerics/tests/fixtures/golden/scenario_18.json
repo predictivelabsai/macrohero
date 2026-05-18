@@ -1,0 +1,131 @@
+{
+  "input": {
+    "factors": [
+      {
+        "direction": "down",
+        "name": "WTI crude",
+        "severity": "severe"
+      },
+      {
+        "direction": "down",
+        "name": "Brent crude",
+        "severity": "severe"
+      },
+      {
+        "direction": "down",
+        "name": "Energy sector",
+        "severity": "severe"
+      },
+      {
+        "direction": "down",
+        "name": "High-yield credit",
+        "severity": "moderate"
+      }
+    ],
+    "horizon_days": 14,
+    "pair": "EUR/USD",
+    "regression_window_days": 252
+  },
+  "output": {
+    "diagnostics": {
+      "condition_number": 422.01822273074384,
+      "error": null,
+      "max_vif": 24.76029871640026,
+      "n_observations": 251,
+      "residual_excess_kurtosis": 1.1964984678170492,
+      "residual_skewness": 0.48276589426537847,
+      "warnings": [
+        "low_r_squared",
+        "high_collinearity",
+        "unstable_oos"
+      ]
+    },
+    "factors": [
+      {
+        "beta": 0.023854005428883922,
+        "ci_high": 0.09841092840263521,
+        "ci_low": -0.05070291754486736,
+        "contribution_pct": -0.48826177361708367,
+        "direction": "down",
+        "expected_change": -20.468754191942363,
+        "name": "WTI crude",
+        "p_value": 0.5306006829732648,
+        "se": 0.03803924641517923,
+        "severity": "severe",
+        "sigma_multiple": -2.0,
+        "t_stat": 0.6270893268633521,
+        "ticker": "USO",
+        "unit": "%",
+        "vif": 22.825360098625357
+      },
+      {
+        "beta": -0.06115350098214882,
+        "ci_high": 0.02399603141931017,
+        "ci_low": -0.1463030333836078,
+        "contribution_pct": 1.1850729955112258,
+        "direction": "down",
+        "expected_change": -19.37866150716633,
+        "name": "Brent crude",
+        "p_value": 0.15923430743215009,
+        "se": 0.04344363898033622,
+        "severity": "severe",
+        "sigma_multiple": -2.0,
+        "t_stat": -1.407651440290915,
+        "ticker": "BNO",
+        "unit": "%",
+        "vif": 24.76029871640026
+      },
+      {
+        "beta": 0.013514595646865975,
+        "ci_high": 0.061299108678684315,
+        "ci_low": -0.034269917384952366,
+        "contribution_pct": -0.13000197642610506,
+        "direction": "down",
+        "expected_change": -9.619375956412904,
+        "name": "Energy sector",
+        "p_value": 0.5793498958671173,
+        "se": 0.02437985358766242,
+        "severity": "severe",
+        "sigma_multiple": -2.0,
+        "t_stat": 0.5543345696589878,
+        "ticker": "XLE",
+        "unit": "%",
+        "vif": 1.7368235840154498
+      },
+      {
+        "beta": 0.2559939452556286,
+        "ci_high": 0.5010849589671529,
+        "ci_low": 0.010902931544104322,
+        "contribution_pct": -0.2555473351628919,
+        "direction": "down",
+        "expected_change": -0.9982553880628282,
+        "name": "High-yield credit",
+        "p_value": 0.04063932865460449,
+        "se": 0.1250464355671042,
+        "severity": "moderate",
+        "sigma_multiple": -1.0,
+        "t_stat": 2.047191062221469,
+        "ticker": "HYG",
+        "unit": "%",
+        "vif": 1.2397834634177312
+      }
+    ],
+    "horizon_days": 14,
+    "intercept": 0.00023800873088241853,
+    "pair": "EUR/USD",
+    "projection": {
+      "band_95_high_pct": 2.6530676133176945,
+      "band_95_low_pct": -2.0305437927074044,
+      "parameter_variance_pct2": 0.08454146347251966,
+      "point_pct": 0.31126191030514505,
+      "projected_spot": 1.1649347468167557,
+      "residual_variance_pct2": 1.343002776079256,
+      "spot_at_t0": 1.16132,
+      "spot_band_high": 1.1921306048069809,
+      "spot_band_low": 1.1377388888265303
+    },
+    "r_squared": 0.09401770701777123,
+    "regression_window_days": 252
+  },
+  "scenario_id": "scenario_18"
+}

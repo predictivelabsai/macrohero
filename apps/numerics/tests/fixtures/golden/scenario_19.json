@@ -1,0 +1,32 @@
+{
+  "input": {
+    "factors": [
+      {
+        "direction": "down",
+        "name": "Brent crude",
+        "severity": "severe"
+      }
+    ],
+    "horizon_days": 14,
+    "pair": "EUR/USD",
+    "regression_window_days": 60
+  },
+  "output": {
+    "diagnostics": {
+      "error": {
+        "code": "insufficient_data",
+        "message": "only 59 aligned return observations after inner-join (need >= 60)"
+      },
+      "n_observations": 0,
+      "warnings": []
+    },
+    "factors": [],
+    "horizon_days": 14,
+    "intercept": 0.0,
+    "pair": "EUR/USD",
+    "projection": null,
+    "r_squared": 0.0,
+    "regression_window_days": 60
+  },
+  "scenario_id": "scenario_19"
+}

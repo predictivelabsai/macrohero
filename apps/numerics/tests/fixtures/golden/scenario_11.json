@@ -1,0 +1,63 @@
+{
+  "input": {
+    "factors": [
+      {
+        "direction": "down",
+        "name": "S&P 500",
+        "severity": "severe"
+      }
+    ],
+    "horizon_days": 90,
+    "pair": "EUR/USD",
+    "regression_window_days": 252
+  },
+  "output": {
+    "diagnostics": {
+      "condition_number": 131.23956458928242,
+      "error": null,
+      "max_vif": 1.0,
+      "n_observations": 251,
+      "residual_excess_kurtosis": 1.2146817743055474,
+      "residual_skewness": 0.43083439105555504,
+      "warnings": [
+        "low_r_squared"
+      ]
+    },
+    "factors": [
+      {
+        "beta": 0.0753094746450785,
+        "ci_high": 0.16508542371557228,
+        "ci_low": -0.014466474425415266,
+        "contribution_pct": -1.090946142671001,
+        "direction": "down",
+        "expected_change": -14.486173855447213,
+        "name": "S&P 500",
+        "p_value": 0.10014190130456177,
+        "se": 0.045804055648211106,
+        "severity": "severe",
+        "sigma_multiple": -2.0,
+        "t_stat": 1.6441660804771934,
+        "ticker": "SPY",
+        "unit": "%",
+        "vif": 1.0
+      }
+    ],
+    "horizon_days": 90,
+    "intercept": 8.368876034364802e-05,
+    "pair": "EUR/USD",
+    "projection": {
+      "band_95_high_pct": 5.394753029694037,
+      "band_95_low_pct": -7.576645315036039,
+      "parameter_variance_pct2": 0.44026610693879153,
+      "point_pct": -1.090946142671001,
+      "projected_spot": 1.1486506242559331,
+      "residual_variance_pct2": 10.509414691274593,
+      "spot_at_t0": 1.16132,
+      "spot_band_high": 1.2239703458844426,
+      "spot_band_low": 1.0733309026274234
+    },
+    "r_squared": 0.018589598102636162,
+    "regression_window_days": 252
+  },
+  "scenario_id": "scenario_11"
+}

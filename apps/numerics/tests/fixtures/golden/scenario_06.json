@@ -1,0 +1,64 @@
+{
+  "input": {
+    "factors": [
+      {
+        "direction": "down",
+        "name": "WTI crude",
+        "severity": "moderate"
+      }
+    ],
+    "horizon_days": 14,
+    "pair": "USD/JPY",
+    "regression_window_days": 252
+  },
+  "output": {
+    "diagnostics": {
+      "condition_number": 36.95057996314418,
+      "error": null,
+      "max_vif": 1.0,
+      "n_observations": 251,
+      "residual_excess_kurtosis": 1.8584282598335529,
+      "residual_skewness": -0.48097474454498085,
+      "warnings": [
+        "low_r_squared",
+        "unstable_oos"
+      ]
+    },
+    "factors": [
+      {
+        "beta": 0.05339288243813186,
+        "ci_high": 0.07466251854601923,
+        "ci_low": 0.03212324633024449,
+        "contribution_pct": -0.5417476760899481,
+        "direction": "down",
+        "expected_change": -10.146439962624036,
+        "name": "WTI crude",
+        "p_value": 8.647272923652042e-07,
+        "se": 0.010851855157085394,
+        "severity": "moderate",
+        "sigma_multiple": -1.0,
+        "t_stat": 4.920161729515029,
+        "ticker": "USO",
+        "unit": "%",
+        "vif": 1.0
+      }
+    ],
+    "horizon_days": 14,
+    "intercept": 0.00015356690451347893,
+    "pair": "USD/JPY",
+    "projection": {
+      "band_95_high_pct": 2.5944140038393884,
+      "band_95_low_pct": -3.6779093560192844,
+      "parameter_variance_pct2": 0.012123704902189125,
+      "point_pct": -0.5417476760899481,
+      "projected_spot": 157.9834663213917,
+      "residual_variance_pct2": 2.548140269133941,
+      "spot_at_t0": 158.844,
+      "spot_band_high": 162.96507098025864,
+      "spot_band_low": 153.00186166252473
+    },
+    "r_squared": 0.06658763298783366,
+    "regression_window_days": 252
+  },
+  "scenario_id": "scenario_06"
+}

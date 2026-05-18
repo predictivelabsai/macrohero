@@ -1,0 +1,64 @@
+{
+  "input": {
+    "factors": [
+      {
+        "direction": "down",
+        "name": "Brent crude",
+        "severity": "severe"
+      }
+    ],
+    "horizon_days": 14,
+    "pair": "EUR/USD",
+    "regression_window_days": 500
+  },
+  "output": {
+    "diagnostics": {
+      "condition_number": 44.55101096775321,
+      "error": null,
+      "max_vif": 1.0,
+      "n_observations": 496,
+      "residual_excess_kurtosis": 4.215482158849283,
+      "residual_skewness": 0.606420382566771,
+      "warnings": [
+        "low_r_squared",
+        "fat_tails"
+      ]
+    },
+    "factors": [
+      {
+        "beta": -0.04105772119947595,
+        "ci_high": -0.022666205291324355,
+        "ci_low": -0.05944923710762754,
+        "contribution_pct": 0.6903513798758864,
+        "direction": "down",
+        "expected_change": -16.814166975362916,
+        "name": "Brent crude",
+        "p_value": 1.2112256180730518e-05,
+        "se": 0.009383426483750812,
+        "severity": "severe",
+        "sigma_multiple": -2.0,
+        "t_stat": -4.375557401187637,
+        "ticker": "BNO",
+        "unit": "%",
+        "vif": 1.0
+      }
+    ],
+    "horizon_days": 14,
+    "intercept": 0.00018777490784664406,
+    "pair": "EUR/USD",
+    "projection": {
+      "band_95_high_pct": 3.0473287789460226,
+      "band_95_low_pct": -1.6666260191942495,
+      "parameter_variance_pct2": 0.024892792755215686,
+      "point_pct": 0.6903513798758864,
+      "projected_spot": 1.1693371886447743,
+      "residual_variance_pct2": 1.4212084306223935,
+      "spot_at_t0": 1.16132,
+      "spot_band_high": 1.196709238575656,
+      "spot_band_low": 1.1419651387138932
+    },
+    "r_squared": 0.03503490113987118,
+    "regression_window_days": 500
+  },
+  "scenario_id": "scenario_20"
+}

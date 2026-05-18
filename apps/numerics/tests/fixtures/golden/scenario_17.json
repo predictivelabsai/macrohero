@@ -1,0 +1,107 @@
+{
+  "input": {
+    "factors": [
+      {
+        "direction": "down",
+        "name": "US 20+Y Treasury",
+        "severity": "severe"
+      },
+      {
+        "direction": "up",
+        "name": "Dollar Index",
+        "severity": "moderate"
+      },
+      {
+        "direction": "up",
+        "name": "S&P 500",
+        "severity": "mild"
+      }
+    ],
+    "horizon_days": 30,
+    "pair": "USD/JPY",
+    "regression_window_days": 252
+  },
+  "output": {
+    "diagnostics": {
+      "condition_number": 232.92947529962856,
+      "error": null,
+      "max_vif": 1.0940971963981017,
+      "n_observations": 251,
+      "residual_excess_kurtosis": 5.862458954914128,
+      "residual_skewness": 0.7176730798160337,
+      "warnings": [
+        "fat_tails"
+      ]
+    },
+    "factors": [
+      {
+        "beta": -0.21188479651087122,
+        "ci_high": -0.10510916238091281,
+        "ci_low": -0.3186604306408296,
+        "contribution_pct": 1.496808891509581,
+        "direction": "down",
+        "expected_change": -7.064258107035933,
+        "name": "US 20+Y Treasury",
+        "p_value": 0.00010048829560494279,
+        "se": 0.0544773643520196,
+        "severity": "severe",
+        "sigma_multiple": -2.0,
+        "t_stat": -3.8894098316086425,
+        "ticker": "TLT",
+        "unit": "%",
+        "vif": 1.0896418372932597
+      },
+      {
+        "beta": 0.7838391690424231,
+        "ci_high": 1.1468451912886493,
+        "ci_low": 0.42083314679619704,
+        "contribution_pct": 1.9859309828339864,
+        "direction": "up",
+        "expected_change": 2.5335949787506773,
+        "name": "Dollar Index",
+        "p_value": 2.313861902040914e-05,
+        "se": 0.1852071542072582,
+        "severity": "moderate",
+        "sigma_multiple": 1.0,
+        "t_stat": 4.23222943194332,
+        "ticker": "UUP",
+        "unit": "%",
+        "vif": 1.0940971963981017
+      },
+      {
+        "beta": 0.07338115030732217,
+        "ci_high": 0.1354335612405294,
+        "ci_low": 0.011328739374114931,
+        "contribution_pct": 0.15347263212108048,
+        "direction": "up",
+        "expected_change": 2.0914448939316577,
+        "name": "S&P 500",
+        "p_value": 0.020458461251073024,
+        "se": 0.031659393333269004,
+        "severity": "mild",
+        "sigma_multiple": 0.5,
+        "t_stat": 2.317831852773067,
+        "ticker": "SPY",
+        "unit": "%",
+        "vif": 1.0561996228870034
+      }
+    ],
+    "horizon_days": 30,
+    "intercept": 0.0002446037403303915,
+    "pair": "USD/JPY",
+    "projection": {
+      "band_95_high_pct": 7.341162923563652,
+      "band_95_low_pct": -0.06873791063435677,
+      "parameter_variance_pct2": 0.09830119628330806,
+      "point_pct": 3.6362125064646476,
+      "projected_spot": 164.6199053937687,
+      "residual_variance_pct2": 3.474860401270339,
+      "spot_at_t0": 158.844,
+      "spot_band_high": 170.50499683430544,
+      "spot_band_low": 158.73481395323196
+    },
+    "r_squared": 0.5341756814421534,
+    "regression_window_days": 252
+  },
+  "scenario_id": "scenario_17"
+}

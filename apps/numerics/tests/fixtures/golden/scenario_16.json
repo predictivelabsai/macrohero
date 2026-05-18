@@ -1,0 +1,86 @@
+{
+  "input": {
+    "factors": [
+      {
+        "direction": "down",
+        "name": "S&P 500",
+        "severity": "severe"
+      },
+      {
+        "direction": "up",
+        "name": "VIX (volatility)",
+        "severity": "severe"
+      }
+    ],
+    "horizon_days": 30,
+    "pair": "EUR/USD",
+    "regression_window_days": 252
+  },
+  "output": {
+    "diagnostics": {
+      "condition_number": 238.65255997172957,
+      "error": null,
+      "max_vif": 3.205271906602259,
+      "n_observations": 251,
+      "residual_excess_kurtosis": 1.0275232865625803,
+      "residual_skewness": 0.39158113411605744,
+      "warnings": [
+        "low_r_squared",
+        "unstable_oos"
+      ]
+    },
+    "factors": [
+      {
+        "beta": 0.2315328022995447,
+        "ci_high": 0.35095312395024153,
+        "ci_low": 0.11211248064884789,
+        "contribution_pct": -1.9364469059991563,
+        "direction": "down",
+        "expected_change": -8.363596374970166,
+        "name": "S&P 500",
+        "p_value": 0.00014466152252649937,
+        "se": 0.060928735536069804,
+        "severity": "severe",
+        "sigma_multiple": -2.0,
+        "t_stat": 3.8000592046174555,
+        "ticker": "SPY",
+        "unit": "%",
+        "vif": 3.205271906602259
+      },
+      {
+        "beta": 0.04012208349927291,
+        "ci_high": 0.07080408055325228,
+        "ci_low": 0.009440086445293535,
+        "contribution_pct": 1.5752167314444523,
+        "direction": "up",
+        "expected_change": 39.26059152618529,
+        "name": "VIX (volatility)",
+        "p_value": 0.010375913978395723,
+        "se": 0.015654080129581315,
+        "severity": "severe",
+        "sigma_multiple": 2.0,
+        "t_stat": 2.563043191752591,
+        "ticker": "VXX",
+        "unit": "%",
+        "vif": 3.2052719066022575
+      }
+    ],
+    "horizon_days": 30,
+    "intercept": 3.919545736320501e-05,
+    "pair": "EUR/USD",
+    "projection": {
+      "band_95_high_pct": 3.4075416254762696,
+      "band_95_low_pct": -4.130001974585677,
+      "parameter_variance_pct2": 0.17527588850403786,
+      "point_pct": -0.3612301745547039,
+      "projected_spot": 1.1571249617368613,
+      "residual_variance_pct2": 3.522048372405141,
+      "spot_at_t0": 1.16132,
+      "spot_band_high": 1.200892462404981,
+      "spot_band_low": 1.1133574610687416
+    },
+    "r_squared": 0.05486401068671665,
+    "regression_window_days": 252
+  },
+  "scenario_id": "scenario_16"
+}

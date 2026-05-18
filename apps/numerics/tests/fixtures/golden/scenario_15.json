@@ -1,0 +1,64 @@
+{
+  "input": {
+    "factors": [
+      {
+        "direction": "down",
+        "name": "WTI crude",
+        "severity": "severe"
+      }
+    ],
+    "horizon_days": 30,
+    "pair": "USD/CAD",
+    "regression_window_days": 252
+  },
+  "output": {
+    "diagnostics": {
+      "condition_number": 36.95057996314418,
+      "error": null,
+      "max_vif": 1.0,
+      "n_observations": 251,
+      "residual_excess_kurtosis": 0.90946125199449,
+      "residual_skewness": -0.4667717478597143,
+      "warnings": [
+        "low_r_squared",
+        "unstable_oos"
+      ]
+    },
+    "factors": [
+      {
+        "beta": -0.002906144691003784,
+        "ci_high": 0.012066640769427175,
+        "ci_low": -0.01787893015143474,
+        "contribution_pct": 0.08632916260686385,
+        "direction": "down",
+        "expected_change": -29.70573449907813,
+        "name": "WTI crude",
+        "p_value": 0.7036288849024216,
+        "se": 0.007639176255321917,
+        "severity": "severe",
+        "sigma_multiple": -2.0,
+        "t_stat": -0.3804264483332461,
+        "ticker": "USO",
+        "unit": "%",
+        "vif": 1.0
+      }
+    ],
+    "horizon_days": 30,
+    "intercept": -7.01739662045128e-05,
+    "pair": "USD/CAD",
+    "projection": {
+      "band_95_high_pct": 2.8089064611550754,
+      "band_95_low_pct": -2.6362481359413477,
+      "parameter_variance_pct2": 0.05149601838028207,
+      "point_pct": 0.08632916260686385,
+      "projected_spot": 1.377318001505382,
+      "residual_variance_pct2": 1.8780195862037654,
+      "spot_at_t0": 1.37613,
+      "spot_band_high": 1.4147842044838934,
+      "spot_band_low": 1.3398517985268705
+    },
+    "r_squared": 0.0007305876877226058,
+    "regression_window_days": 252
+  },
+  "scenario_id": "scenario_15"
+}
