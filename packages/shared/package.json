@@ -7,10 +7,14 @@
   "exports": {
     ".": "./src/index.ts"
   },
+  "scripts": {
+    "gen": "tsx scripts/gen-factors.ts"
+  },
   "dependencies": {
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "tsx": "^4.19.0",
     "typescript": "^5.5.0"
   }
 }
