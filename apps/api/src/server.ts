@@ -5,6 +5,8 @@ import { clerkAuth } from "./middleware/clerk.js";
 import { healthRoutes } from "./routes/health.js";
 import { makeMeRoutes } from "./routes/me.js";
 import { makeChatSessionRoutes } from "./routes/chat-sessions.js";
+import { makeChatMessagesRoutes } from "./routes/chat-messages.js";
+import { makeChatStartRoutes } from "./routes/chat-start.js";
 
 export interface CreateServerOptions {
   /** Test-only: bypass auth + override env vars from a partial. */
@@ -49,6 +51,8 @@ export function createServer(opts: CreateServerOptions = {}): Hono {
 
   app.route("/", makeMeRoutes({ auth }));
   app.route("/", makeChatSessionRoutes({ auth }));
+  app.route("/", makeChatMessagesRoutes({ auth }));
+  app.route("/", makeChatStartRoutes({ auth }));
 
   return app;
 }
