@@ -20,5 +20,11 @@ export function makeSupervisor(opts: MakeSupervisorOptions = {}) {
     agents: [research, analytics],
     llm: opts.llm ?? makeLLM(),
     prompt: SUPERVISOR_PROMPT,
+    // Wrap every AIMessage the LLM reads as `<name>agent</name><content>...</content>`.
+    // Needed because DeepSeek (and most non-OpenAI providers) ignores the message-level
+    // `name` field, so without inline tagging a sub-agent reading shared history can't
+    // tell which prior turn was the supervisor vs. itself vs. a peer specialist.
+    // Wrap is applied per LLM call via withAgentName; persisted state stays clean.
+    includeAgentName: "inline",
   }).compile();
 }

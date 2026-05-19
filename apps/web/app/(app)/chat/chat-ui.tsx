@@ -24,14 +24,15 @@ export type ChatAction = {
 };
 
 export type ChatMessagePart =
-  | { kind: "reasoning"; text: string }
-  | { kind: "text"; text: string }
+  | { kind: "reasoning"; text: string; agent?: string }
+  | { kind: "text"; text: string; agent?: string }
   | {
       kind: "tool";
       tool_name: string;
       state?: "output-available" | "output-error";
       input?: Record<string, unknown>;
       action_id?: string | null;
+      agent?: string;
     }
   | { kind: "scenario_projection"; data: ProjectionResult };
 
@@ -84,14 +85,26 @@ export function ChatUI({
       const parts: UIMessage["parts"] = [];
       if (m.parts.length > 0) {
         for (const p of m.parts) {
+          // Re-attach the agent attribution that the streaming layer
+          // recorded under providerMetadata.macrohero.agent. For tools the
+          // AI SDK exposes this on `callProviderMetadata`; for text and
+          // reasoning it's on `providerMetadata`. Same shape either way.
+          const agentMeta = p.kind !== "scenario_projection" && p.agent
+            ? { macrohero: { agent: p.agent } }
+            : undefined;
           if (p.kind === "reasoning" && p.text) {
             parts.push({
               type: "reasoning",
               text: p.text,
               state: "done",
+              ...(agentMeta ? { providerMetadata: agentMeta } : {}),
             } as UIMessage["parts"][number]);
           } else if (p.kind === "text" && p.text) {
-            parts.push({ type: "text", text: p.text });
+            parts.push({
+              type: "text",
+              text: p.text,
+              ...(agentMeta ? { providerMetadata: agentMeta } : {}),
+            } as UIMessage["parts"][number]);
           } else if (p.kind === "tool") {
             // Re-emit as a tool-${name} part with state already "output-available"
             // so the pill renders as "complete" on history reload.
@@ -99,6 +112,7 @@ export function ChatUI({
               type: `tool-${p.tool_name}`,
               state: p.state ?? "output-available",
               input: p.input ?? {},
+              ...(agentMeta ? { callProviderMetadata: agentMeta } : {}),
             } as unknown as UIMessage["parts"][number]);
           } else if (p.kind === "scenario_projection") {
             parts.push({
@@ -344,6 +358,22 @@ function MessageBubble({
   return <AssistantBubble message={message} isStreaming={isStreaming} />;
 }
 
+// AI SDK v6 attaches custom providerMetadata under a namespace key. We use
+// `macrohero.agent` for text/reasoning (via `providerMetadata`) and the same
+// shape via `callProviderMetadata` on tool parts.
+function readPartAgent(p: {
+  providerMetadata?: Record<string, unknown> | null;
+  callProviderMetadata?: Record<string, unknown> | null;
+}): string | undefined {
+  const pm = p.providerMetadata ?? p.callProviderMetadata;
+  const ns = pm?.["macrohero"];
+  if (ns && typeof ns === "object") {
+    const v = (ns as { agent?: unknown }).agent;
+    if (typeof v === "string" && v.length > 0) return v;
+  }
+  return undefined;
+}
+
 function AssistantBubble({
   message,
   isStreaming,
@@ -353,11 +383,15 @@ function AssistantBubble({
 }) {
   type AnyPart = {
     type: string;
+    id?: string;
+    toolCallId?: string;
     text?: string;
     state?: string;
     data?: ProjectionResult;
     input?: { query?: string } & Record<string, unknown>;
     output?: unknown;
+    providerMetadata?: Record<string, unknown> | null;
+    callProviderMetadata?: Record<string, unknown> | null;
   };
   const renderedParts = (message.parts as unknown as AnyPart[]).filter(
     (p) =>
@@ -388,36 +422,47 @@ function AssistantBubble({
   }, [isStreaming, contentLen, partsCount]);
 
   const lastPart = renderedParts[renderedParts.length - 1];
-  const lastIsProse = lastPart?.type === "text" || lastPart?.type === "reasoning";
+  // Suppress dots when the last visible thing is a tool pill that's still
+  // running (state input-streaming or input-available) — that pill is
+  // already showing a spinner. After the pill completes (output-available)
+  // OR after a text/reasoning bubble, an idle gap before the next chunk
+  // (e.g., between "Routed to research agent" and research's first reasoning
+  // chunk) deserves dots so the user knows work is still ongoing.
+  const lastPartIsRunningPill =
+    !!lastPart &&
+    lastPart.type.startsWith("tool-") &&
+    lastPart.state !== "output-available" &&
+    lastPart.state !== "output-error";
   const showDotsPlaceholder =
-    isStreaming && (renderedParts.length === 0 || (idle && lastIsProse));
+    isStreaming && (renderedParts.length === 0 || (idle && !lastPartIsRunningPill));
 
   return (
     <div className="flex justify-start">
       <div className="w-full max-w-[85%] space-y-2">
         {renderedParts.map((p, i) => {
           const key = `part-${i}`;
+          const agent = readPartAgent(p);
           if (p.type === "text") {
             if (!p.text) return null;
-            return (
-              <div
-                key={key}
-                className="rounded-2xl rounded-bl-md border border-border/60 bg-card/50 px-4 py-3 text-foreground backdrop-blur-sm"
-              >
-                <Markdown>{p.text}</Markdown>
-              </div>
-            );
+            return <TextBubble key={key} text={p.text} agent={agent} />;
           }
           if (p.type === "reasoning") {
             if (!p.text) return null;
             const isLive = isStreaming && p.state !== "done";
-            return <ReasoningBlock key={key} text={p.text} streaming={isLive} />;
+            return (
+              <ReasoningBlock
+                key={key}
+                text={p.text}
+                streaming={isLive}
+                agent={agent}
+              />
+            );
           }
           if (p.type === "data-scenario_projection" && p.data) {
             return <ScenarioCard key={key} data={p.data} />;
           }
           if (p.type.startsWith("tool-")) {
-            return <ToolPill key={key} part={p} />;
+            return <ToolPill key={key} part={p} agent={agent} />;
           }
           return null;
         })}
@@ -427,7 +472,54 @@ function AssistantBubble({
   );
 }
 
-const TOOL_PILL_CONFIG: Record<string, { running: string; done: string; icon: "search" | "chart" }> = {
+const AGENT_LABEL: Record<string, string> = {
+  supervisor: "Supervisor",
+  research: "Research",
+  analytics: "Analytics",
+};
+
+function agentLabel(agent: string): string {
+  return AGENT_LABEL[agent] ?? agent.charAt(0).toUpperCase() + agent.slice(1);
+}
+
+function AgentBadge({ agent }: { agent: string }) {
+  return (
+    <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground/80">
+      {agentLabel(agent)}
+    </span>
+  );
+}
+
+// Primary bubble for the supervisor's text — already visually distinct from
+// the rounded card; no badge needed. Sub-agent text (research / analytics)
+// renders as a muted indented bubble with a smaller font + agent badge,
+// visually clearly NOT the final answer.
+function TextBubble({
+  text,
+  agent,
+}: {
+  text: string;
+  agent: string | undefined;
+}) {
+  const isPrimary = !agent || agent === "supervisor";
+  if (isPrimary) {
+    return (
+      <div className="rounded-2xl rounded-bl-md border border-border/60 bg-card/50 px-4 py-3 text-foreground backdrop-blur-sm">
+        <Markdown>{text}</Markdown>
+      </div>
+    );
+  }
+  return (
+    <div className="ml-4 border-l-2 border-border/50 pb-2 pl-3 text-muted-foreground opacity-80">
+      <div className="mb-1">
+        <AgentBadge agent={agent} />
+      </div>
+      <Markdown className="text-xs">{text}</Markdown>
+    </div>
+  );
+}
+
+const TOOL_PILL_CONFIG: Record<string, { running: string; done: string; icon: "search" | "chart" | "agent" }> = {
   "tool-search_current_events": {
     running: "Searching the web for current context",
     done: "Web search complete",
@@ -438,23 +530,49 @@ const TOOL_PILL_CONFIG: Record<string, { running: string; done: string; icon: "s
     done: "Projection complete",
     icon: "chart",
   },
+  "tool-transfer_to_research": {
+    running: "Routing to research agent",
+    done: "Routed to research agent",
+    icon: "agent",
+  },
+  "tool-transfer_to_analytics": {
+    running: "Routing to analytics agent",
+    done: "Routed to analytics agent",
+    icon: "agent",
+  },
 };
+
+/**
+ * Strip the `tool-` prefix and humanize the rest as a fallback label.
+ * Used for any tool that doesn't have an entry in TOOL_PILL_CONFIG —
+ * prevents new tools from silently disappearing.
+ */
+function fallbackToolLabel(toolType: string): string {
+  return toolType.replace(/^tool-/, "").replace(/_/g, " ");
+}
 
 function ToolPill({
   part,
+  agent,
 }: {
   part: {
     type: string;
     state?: string;
     input?: { query?: string } & Record<string, unknown>;
   };
+  agent: string | undefined;
 }) {
   const config = TOOL_PILL_CONFIG[part.type];
-  if (!config) return null;
   const done = part.state === "output-available";
   const errored = part.state === "output-error";
   const running = !done && !errored;
-  const label = errored ? "Tool error" : running ? config.running : config.done;
+  const fallbackName = !config ? fallbackToolLabel(part.type) : null;
+  const label = errored
+    ? "Tool error"
+    : config
+      ? running ? config.running : config.done
+      : running ? `Running ${fallbackName}` : `${fallbackName} complete`;
+  const icon = config?.icon ?? "agent";
   // Show the search query inline as additional context once we have it.
   const query =
     part.type === "tool-search_current_events" && typeof part.input?.query === "string"
@@ -468,7 +586,7 @@ function ToolPill({
         ) : errored ? (
           <span className="text-destructive">!</span>
         ) : (
-          <ToolDoneIcon kind={config.icon} />
+          <ToolDoneIcon kind={icon} />
         )}
         <span>{label}</span>
         {query && (
@@ -476,12 +594,17 @@ function ToolPill({
             “{query.length > 60 ? query.slice(0, 60) + "…" : query}”
           </span>
         )}
+        {agent && (
+          <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground/60">
+            · {agentLabel(agent)}
+          </span>
+        )}
       </div>
     </div>
   );
 }
 
-function ToolDoneIcon({ kind }: { kind: "search" | "chart" }) {
+function ToolDoneIcon({ kind }: { kind: "search" | "chart" | "agent" }) {
   if (kind === "search") {
     return (
       <svg
@@ -496,6 +619,25 @@ function ToolDoneIcon({ kind }: { kind: "search" | "chart" }) {
       >
         <circle cx="11" cy="11" r="7" />
         <path d="m21 21-4.3-4.3" />
+      </svg>
+    );
+  }
+  if (kind === "agent") {
+    // Right-facing arrow inside a circle — signals "handoff/route to".
+    return (
+      <svg
+        width="12"
+        height="12"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2.5"
+      >
+        <circle cx="12" cy="12" r="9" />
+        <path d="M9 12h6" />
+        <path d="m13 9 3 3-3 3" />
       </svg>
     );
   }
@@ -516,7 +658,15 @@ function ToolDoneIcon({ kind }: { kind: "search" | "chart" }) {
   );
 }
 
-function ReasoningBlock({ text, streaming }: { text: string; streaming: boolean }) {
+function ReasoningBlock({
+  text,
+  streaming,
+  agent,
+}: {
+  text: string;
+  streaming: boolean;
+  agent?: string;
+}) {
   return (
     <details
       open={streaming}
@@ -525,6 +675,11 @@ function ReasoningBlock({ text, streaming }: { text: string; streaming: boolean 
       <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-1.5 select-none">
         {streaming ? <Spinner /> : <ThinkingIcon />}
         <span className="font-medium">{streaming ? "Thinking..." : "Thought process"}</span>
+        {agent && (
+          <span className="ml-auto font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground/70">
+            {agentLabel(agent)}
+          </span>
+        )}
       </summary>
       <div className="border-t border-border/60 px-3 py-2 whitespace-pre-wrap leading-relaxed">
         {text}

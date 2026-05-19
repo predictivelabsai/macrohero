@@ -11,9 +11,9 @@ export type ChatAction = {
 };
 
 export type ChatMessagePart =
-  | { kind: "reasoning"; text: string }
-  | { kind: "text"; text: string }
-  | { kind: "tool"; tool_name: string; action_id: string | null }
+  | { kind: "reasoning"; text: string; agent?: string }
+  | { kind: "text"; text: string; agent?: string }
+  | { kind: "tool"; tool_name: string; action_id: string | null; agent?: string }
   | { kind: "scenario_projection"; data: ProjectionResult };
 
 export type ChatMessageRow = {
