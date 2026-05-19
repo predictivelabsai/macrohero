@@ -6,12 +6,13 @@
 # in the Coolify application settings.
 #
 # Magic vars (Coolify fills these automatically):
-#   SERVICE_FQDN_API     -> api FQDN (Python service; legacy)
-#   SERVICE_FQDN_API_TS  -> api-ts FQDN (TypeScript service; current target)
-#   SERVICE_FQDN_WEB     -> web FQDN
-#   SERVICE_URL_API      -> full URL incl. scheme (https://api.<domain>)
-#   SERVICE_URL_API_TS   -> full URL incl. scheme (https://api-ts.<domain>)
-#   SERVICE_URL_WEB      -> full URL incl. scheme (https://<domain>)
+#   SERVICE_FQDN_API          -> api FQDN (Python service; legacy)
+#   SERVICE_FQDN_API_TS_8002  -> api-ts FQDN (TypeScript service; current target,
+#                                routed to container port 8002 via Traefik)
+#   SERVICE_FQDN_WEB          -> web FQDN
+#   SERVICE_URL_API           -> full URL incl. scheme (https://api.<domain>)
+#   SERVICE_URL_API_TS        -> full URL incl. scheme (https://api-ts.<domain>)
+#   SERVICE_URL_WEB           -> full URL incl. scheme (https://<domain>)
 #
 # Cutover state: web's NEXT_PUBLIC_API_URL points at SERVICE_URL_API_TS.
 # Rollback: change both NEXT_PUBLIC_API_URL references (build arg + env)
@@ -57,7 +58,11 @@ services:
       context: .
       dockerfile: apps/api/Dockerfile
     environment:
-      SERVICE_FQDN_API_TS: ${SERVICE_FQDN_API_TS}
+      # Use the port-suffixed magic var so Coolify wires Traefik to route the
+      # generated FQDN to the container's 8002 listener (matches how
+      # SERVICE_FQDN_API_8000 routes the Python api). Without the port, Coolify
+      # defaults to port 80, which the Node server doesn't listen on.
+      SERVICE_FQDN_API_TS_8002: ${SERVICE_FQDN_API_TS_8002}
       DATABASE_URL: ${DATABASE_URL}
       CLERK_ISSUER: ${CLERK_ISSUER}
       CLERK_JWKS_URL: ${CLERK_JWKS_URL}
