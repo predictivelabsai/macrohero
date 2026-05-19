@@ -10,8 +10,10 @@ RUN corepack enable && corepack prepare pnpm@10.32.1 --activate
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/api/package.json ./apps/api/
+COPY packages/agent/package.json ./packages/agent/
 COPY packages/db/package.json ./packages/db/
 COPY packages/shared/package.json ./packages/shared/
+COPY packages/tools/package.json ./packages/tools/
 
 RUN pnpm install --frozen-lockfile --filter @macrohero/api...
 
@@ -27,8 +29,10 @@ COPY --from=deps /repo/node_modules ./node_modules
 COPY --from=deps /repo/apps/api/node_modules ./apps/api/node_modules
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/api ./apps/api
+COPY packages/agent ./packages/agent
 COPY packages/db ./packages/db
 COPY packages/shared ./packages/shared
+COPY packages/tools ./packages/tools
 
 WORKDIR /repo/apps/api
 EXPOSE 8002
