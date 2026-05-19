@@ -6,28 +6,29 @@
 # in the Coolify application settings.
 #
 # Magic vars (Coolify fills these automatically):
-#   SERVICE_FQDN_API_TS_8002  -> api-ts FQDN (routed to container port 8002
-#                                via Traefik)
-#   SERVICE_FQDN_WEB          -> web FQDN
-#   SERVICE_URL_WEB           -> full URL incl. scheme (https://<domain>)
+#   SERVICE_FQDN_API_8002  -> api FQDN (routed to container port 8002
+#                              via Traefik)
+#   SERVICE_FQDN_WEB       -> web FQDN
+#   SERVICE_URL_WEB        -> full URL incl. scheme (https://<domain>)
 #
-# The legacy Python `api` service was retired in Phase 6 of the
-# Python -> TypeScript refactor. See docs/MIGRATION_NOTES.md.
+# History: a separate Python `api` ran here through Phase 5. It was
+# decommissioned in Phase 6 along with the temporary `api-ts` service
+# name that distinguished the two. See docs/MIGRATION_NOTES.md.
 #
 # Everything else (DATABASE_URL, Clerk keys, etc.) goes in Coolify's
 # Environment Variables UI for this application.
 
 services:
-  api-ts:
+  api:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
     environment:
-      # Use the port-suffixed magic var so Coolify wires Traefik to route the
-      # generated FQDN to the container's 8002 listener (matches how
-      # SERVICE_FQDN_API_8000 routes the Python api). Without the port, Coolify
-      # defaults to port 80, which the Node server doesn't listen on.
-      SERVICE_FQDN_API_TS_8002: ${SERVICE_FQDN_API_TS_8002}
+      # Port-suffixed magic var so Coolify wires Traefik to route the
+      # generated FQDN to the container's 8002 listener. Without the
+      # suffix Coolify defaults to port 80, which the Node server
+      # doesn't listen on.
+      SERVICE_FQDN_API_8002: ${SERVICE_FQDN_API_8002}
       DATABASE_URL: ${DATABASE_URL}
       CLERK_ISSUER: ${CLERK_ISSUER}
       CLERK_JWKS_URL: ${CLERK_JWKS_URL}
@@ -89,21 +90,21 @@ services:
         NEXT_PUBLIC_CLERK_SIGN_UP_URL: ${NEXT_PUBLIC_CLERK_SIGN_UP_URL:-/sign-up}
         NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL: ${NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL:-/chat}
         NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL: ${NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL:-/chat}
-        # Hard-coded because Coolify doesn't auto-generate ${SERVICE_URL_API_TS_8002}
-        # for port-suffixed FQDN magic vars. Traefik routes the URL's port 80 to
-        # the container's 8002. Replace with ${SERVICE_URL_API_TS_8002} (and set
-        # it in Coolify's env-vars UI) for portability, or with ${SERVICE_URL_API}
-        # to roll back to the Python api.
-        NEXT_PUBLIC_API_URL: http://api-ts-l08cwcc4g8s8s4w4ss4ko848.72.62.88.13.sslip.io
+        # Hard-coded because Coolify doesn't auto-generate
+        # ${SERVICE_URL_API_8002} for port-suffixed FQDN magic vars.
+        # Traefik routes the URL's port 80 to the container's 8002.
+        # Once SERVICE_URL_API_8002 is set manually in Coolify's
+        # env-vars UI, swap this for ${SERVICE_URL_API_8002}.
+        NEXT_PUBLIC_API_URL: http://api-l08cwcc4g8s8s4w4ss4ko848.72.62.88.13.sslip.io
     environment:
       SERVICE_FQDN_WEB: ${SERVICE_FQDN_WEB}
       CLERK_SECRET_KEY: ${CLERK_SECRET_KEY}
       # Same URL as the build arg above; see comment there for rationale.
-      NEXT_PUBLIC_API_URL: http://api-ts-l08cwcc4g8s8s4w4ss4ko848.72.62.88.13.sslip.io
+      NEXT_PUBLIC_API_URL: http://api-l08cwcc4g8s8s4w4ss4ko848.72.62.88.13.sslip.io
     expose:
       - "3000"
     depends_on:
-      api-ts:
+      api:
         condition: service_healthy
     restart: unless-stopped
 
