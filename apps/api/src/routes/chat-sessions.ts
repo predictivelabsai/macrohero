@@ -79,8 +79,18 @@ export function makeChatSessionRoutes(opts: ChatSessionRoutesOptions): Hono {
         role: m.role,
         content: m.content,
         reasoning: m.reasoning,
-        actions: chatActionSchema.array().parse(m.actionsJsonb),
-        parts: chatPartSchema.array().parse(m.partsJsonb),
+        // Be permissive on hydration: drop any individual part that doesn't
+        // validate (e.g. a scenario_projection part with a malformed data
+        // payload from an earlier buggy persist). Throwing here breaks
+        // session reload for the entire thread.
+        actions: (m.actionsJsonb ?? [])
+          .map((a) => chatActionSchema.safeParse(a))
+          .filter((r) => r.success)
+          .map((r) => (r as { success: true; data: unknown }).data),
+        parts: (m.partsJsonb ?? [])
+          .map((p) => chatPartSchema.safeParse(p))
+          .filter((r) => r.success)
+          .map((r) => (r as { success: true; data: unknown }).data),
         created_at: m.createdAt.toISOString(),
       })),
     });

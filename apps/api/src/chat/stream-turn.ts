@@ -1,5 +1,4 @@
-import { createUIMessageStream } from "ai";
-import { toUIMessageStream } from "@ai-sdk/langchain";
+import { createUIMessageStream, createUIMessageStreamResponse } from "ai";
 import {
   AIMessage,
   HumanMessage,
@@ -75,7 +74,9 @@ export function streamTurn(opts: StreamTurnOptions): Response {
                 } as never);
               }
             })
-            .catch(() => {})
+            .catch((err) => {
+              console.warn("[streamTurn] title side-channel error:", err);
+            })
         : null;
 
       // Run the agent. streamEvents emits structured LangGraph events.
@@ -84,19 +85,17 @@ export function streamTurn(opts: StreamTurnOptions): Response {
         { version: "v2", recursionLimit: 25 },
       );
 
-      // The Phase 3 transformer intercepts reasoning_content and tool-end
-      // events; the writer here is the AI SDK v6 writer with write(chunk).
-      const transformed = transformLangGraphEvents(
+      // Drain the transformer. It writes ALL wire chunks (reasoning, text,
+      // tool, scenario_projection) directly via writer.write — replacing
+      // @ai-sdk/langchain's toUIMessageStream which (in v2) doesn't rotate
+      // text ids across LLM calls and marks tools as dynamic.
+      for await (const _ of transformLangGraphEvents(
         upstream,
         writer as unknown as StreamWriter,
-      );
-
-      // Convert the transformed (still-LangGraph-shaped) events into AI SDK
-      // v6 UIMessage chunks. `toUIMessageStream` from @ai-sdk/langchain v2
-      // is a top-level standalone function (not a method on LangChainAdapter).
-      writer.merge(
-        toUIMessageStream(transformed as never) as never,
-      );
+      )) {
+        // intentionally empty — side effects flow through writer.write
+        void _;
+      }
 
       // Keep execute alive until the title side-channel either lands or times
       // out, so a fast summarizer can write to a still-open writer. 20s
@@ -140,9 +139,13 @@ export function streamTurn(opts: StreamTurnOptions): Response {
       `Chat agent error: ${err instanceof Error ? err.message : String(err)}`,
   });
 
-  return new Response(stream as unknown as ReadableStream<Uint8Array>, {
+  // createUIMessageStreamResponse serializes the object-shaped UIMessage chunks
+  // into the AI SDK v6 wire format (text/event-stream bytes) and returns a
+  // Response. Without this serialization, Node's HTTP write() rejects the raw
+  // object chunks with ERR_INVALID_ARG_TYPE.
+  return createUIMessageStreamResponse({
+    stream,
     headers: {
-      "content-type": "text/event-stream",
       "cache-control": "no-cache, no-transform",
       "x-vercel-ai-ui-message-stream": "v1",
     },

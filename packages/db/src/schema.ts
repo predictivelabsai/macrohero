@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
 import {
   index,
@@ -27,13 +28,19 @@ export const users = macrohero.table("users", {
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
     .default(sql`now()`)
-    .$onUpdate(() => sql`now()`),
+    .$onUpdate(() => new Date()),
 });
 
 export const chatSessions = macrohero.table(
   "chat_sessions",
   {
-    id: uuid("id").primaryKey().defaultRandom(),
+    // The existing Postgres `chat_sessions.id` column was created by Alembic
+    // without a SQL-level default (the original SQLAlchemy model uses a Python
+    // default `uuid.uuid4` that runs in the ORM). Drizzle's `defaultRandom()`
+    // generates a SQL `DEFAULT gen_random_uuid()` clause, which the existing
+    // column doesn't have — INSERTs without explicit id would send NULL.
+    // `$defaultFn` runs in TS at insert time, matching the SQLAlchemy behavior.
+    id: uuid("id").primaryKey().$defaultFn(() => randomUUID()),
     userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -44,7 +51,7 @@ export const chatSessions = macrohero.table(
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()
       .default(sql`now()`)
-      .$onUpdate(() => sql`now()`),
+      .$onUpdate(() => new Date()),
   },
   (t) => ({
     userIdx: index("ix_chat_sessions_user_id").on(t.userId),
@@ -55,7 +62,9 @@ export const chatSessions = macrohero.table(
 export const chatMessages = macrohero.table(
   "chat_messages",
   {
-    id: uuid("id").primaryKey().defaultRandom(),
+    // Same as chat_sessions.id — the column has no SQL-level default; generate
+    // the UUID in TS at insert time.
+    id: uuid("id").primaryKey().$defaultFn(() => randomUUID()),
     sessionId: uuid("session_id")
       .notNull()
       .references(() => chatSessions.id, { onDelete: "cascade" }),

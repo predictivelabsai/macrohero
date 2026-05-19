@@ -36,8 +36,8 @@ export async function summarizeTitle(content: string): Promise<string | null> {
   let llm;
   try {
     llm = makeFlashLLM();
-  } catch {
-    // Missing DEEPSEEK_API_KEY etc. — surface as no title rather than crash.
+  } catch (err) {
+    console.warn("[summarizeTitle] makeFlashLLM failed:", err);
     return null;
   }
 
@@ -54,11 +54,31 @@ export async function summarizeTitle(content: string): Promise<string | null> {
         setTimeout(() => reject(new Error("title summarizer timeout")), 15_000),
       ),
     ]);
-  } catch {
+  } catch (err) {
+    console.warn("[summarizeTitle] llm.invoke failed:", err);
     return null;
   }
 
-  const raw = typeof response.content === "string" ? response.content : "";
+  // ChatDeepSeek's response.content can be either a string (standard chat
+  // completions) OR an array of content parts (when thinking mode emits a
+  // reasoning block alongside text). Handle both.
+  let raw = "";
+  if (typeof response.content === "string") {
+    raw = response.content;
+  } else if (Array.isArray(response.content)) {
+    raw = response.content
+      .map((p: unknown) => {
+        if (typeof p === "string") return p;
+        if (p && typeof p === "object" && typeof (p as { text?: unknown }).text === "string") {
+          return (p as { text: string }).text;
+        }
+        return "";
+      })
+      .join("");
+  }
+  // Don't use reasoning_content as a fallback — that's the model's internal
+  // thinking process, not a title. If visible content is empty, return null
+  // and the caller keeps the placeholder title.
   const title = clean(raw);
   return title.length > 0 ? title : null;
 }

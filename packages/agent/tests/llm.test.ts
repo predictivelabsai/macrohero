@@ -47,7 +47,12 @@ describe("LLM factories", () => {
       expect.objectContaining({
         model: "deepseek-v4-flash",
         streaming: false,
-        maxTokens: 80,
+        // Thinking-mode requires a separate visible-content budget vs total budget.
+        // See makeFlashLLM in src/llm.ts for the reasoning.
+        modelKwargs: expect.objectContaining({
+          max_completion_tokens: 80,
+          max_tokens: 1024,
+        }),
       }),
     );
   });

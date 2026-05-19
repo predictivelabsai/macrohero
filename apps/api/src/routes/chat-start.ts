@@ -29,11 +29,15 @@ function spawnTitleTask(sessionId: string, content: string): Promise<string | nu
           .set({ title })
           .where(eq(chatSessions.id, sessionId));
         return title;
-      } catch {
+      } catch (err) {
+        console.warn("[spawnTitleTask] DB update failed:", err);
         return null;
       }
     })
-    .catch(() => null);
+    .catch((err) => {
+      console.warn("[spawnTitleTask] summarizeTitle threw:", err);
+      return null;
+    });
 }
 
 export interface ChatStartRoutesOptions {
