@@ -52,8 +52,8 @@ htmlcov/
 *.sqlite
 *.db
 
-# API cache (Massive market data, etc.)
-api/.cache/
+# Numerics cache (Massive market data parquet files)
+apps/numerics/.cache/
 
 # Superpowers planning artifacts (specs/plans stay local)
 docs/superpowers/

@@ -1,8 +1,0 @@
-{
-  "include": ["src", "alembic", "tests"],
-  "venvPath": ".",
-  "venv": ".venv",
-  "pythonVersion": "3.12",
-  "typeCheckingMode": "standard",
-  "extraPaths": ["src"]
-}
