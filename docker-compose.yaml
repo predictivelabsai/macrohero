@@ -6,10 +6,16 @@
 # in the Coolify application settings.
 #
 # Magic vars (Coolify fills these automatically):
-#   SERVICE_FQDN_API   -> api FQDN
-#   SERVICE_FQDN_WEB   -> web FQDN
-#   SERVICE_URL_API    -> full URL incl. scheme (https://api.<domain>)
-#   SERVICE_URL_WEB    -> full URL incl. scheme (https://<domain>)
+#   SERVICE_FQDN_API     -> api FQDN (Python service; legacy)
+#   SERVICE_FQDN_API_TS  -> api-ts FQDN (TypeScript service; current target)
+#   SERVICE_FQDN_WEB     -> web FQDN
+#   SERVICE_URL_API      -> full URL incl. scheme (https://api.<domain>)
+#   SERVICE_URL_API_TS   -> full URL incl. scheme (https://api-ts.<domain>)
+#   SERVICE_URL_WEB      -> full URL incl. scheme (https://<domain>)
+#
+# Cutover state: web's NEXT_PUBLIC_API_URL points at SERVICE_URL_API_TS.
+# Rollback: change both NEXT_PUBLIC_API_URL references (build arg + env)
+# back to ${SERVICE_URL_API} and rebuild web. See docs/MIGRATION_NOTES.md.
 #
 # Everything else (DATABASE_URL, Clerk keys, etc.) goes in Coolify's
 # Environment Variables UI for this application.
@@ -40,6 +46,40 @@ services:
         - python
         - -c
         - "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/healthz', timeout=3).status==200 else 1)"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    restart: unless-stopped
+
+  api-ts:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    environment:
+      SERVICE_FQDN_API_TS: ${SERVICE_FQDN_API_TS}
+      DATABASE_URL: ${DATABASE_URL}
+      CLERK_ISSUER: ${CLERK_ISSUER}
+      CLERK_JWKS_URL: ${CLERK_JWKS_URL}
+      CORS_ORIGINS: ${SERVICE_URL_WEB}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY}
+      DEEPSEEK_MODEL: ${DEEPSEEK_MODEL:-deepseek-v4-pro}
+      DEEPSEEK_FLASH_MODEL: ${DEEPSEEK_FLASH_MODEL:-deepseek-v4-flash}
+      DEEPSEEK_BASE_URL: ${DEEPSEEK_BASE_URL:-https://api.deepseek.com/v1}
+      TAVILY_API_KEY: ${TAVILY_API_KEY}
+      NUMERICS_URL: http://numerics:8001
+      PORT: "8002"
+    expose:
+      - "8002"
+    depends_on:
+      numerics:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://localhost:8002/healthz').then(r=>process.exit(r.status===200?0:1)).catch(()=>process.exit(1))"
       interval: 30s
       timeout: 5s
       retries: 3
