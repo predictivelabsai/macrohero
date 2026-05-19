@@ -37,7 +37,8 @@ COPY packages/tools ./packages/tools
 WORKDIR /repo/apps/api
 EXPOSE 8002
 
-# Node 22+ ships --experimental-strip-types which lets us run .ts files directly
-# at runtime without a compile step. Matches the dev workflow (tsx) and avoids
-# a tsup/tsc build stage.
-CMD ["node", "--experimental-strip-types", "src/index.ts"]
+# Use tsx (now a runtime dep) instead of node --experimental-strip-types.
+# tsx handles both type stripping AND the TypeScript-ESM convention where
+# `import "./db.js"` resolves to `./db.ts` — Node's bare --strip-types flag
+# doesn't rewrite the import path, so it fails with ERR_MODULE_NOT_FOUND.
+CMD ["pnpm", "exec", "tsx", "src/index.ts"]
