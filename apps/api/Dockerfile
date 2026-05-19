@@ -27,6 +27,15 @@ RUN corepack enable && corepack prepare pnpm@10.32.1 --activate
 
 COPY --from=deps /repo/node_modules ./node_modules
 COPY --from=deps /repo/apps/api/node_modules ./apps/api/node_modules
+# pnpm's isolated node-linker puts each workspace package's deps under its
+# OWN node_modules (e.g. packages/db/node_modules/drizzle-orm is a symlink
+# into /repo/node_modules/.pnpm). Without copying these per-package
+# node_modules, ESM resolution from packages/db/src/client.ts can't find
+# drizzle-orm and fails with ERR_MODULE_NOT_FOUND at runtime.
+COPY --from=deps /repo/packages/agent/node_modules ./packages/agent/node_modules
+COPY --from=deps /repo/packages/db/node_modules ./packages/db/node_modules
+COPY --from=deps /repo/packages/shared/node_modules ./packages/shared/node_modules
+COPY --from=deps /repo/packages/tools/node_modules ./packages/tools/node_modules
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/api ./apps/api
 COPY packages/agent ./packages/agent
