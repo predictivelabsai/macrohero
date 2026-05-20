@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from "next/server";
 
 import { apiFetch } from "@/lib/api";
 
-type Me = { user_id: string; timezone: string | null };
+type Me = { user_id: string; timezone: string | null; show_thinking: boolean };
 
 export async function GET() {
   try {

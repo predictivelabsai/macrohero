@@ -1,5 +1,6 @@
 import { getMe } from "@/lib/me";
 
+import { ShowThinkingCard } from "./show-thinking-card";
 import { TimezoneCard } from "./timezone-card";
 
 export default async function SettingsPage() {
@@ -15,6 +16,7 @@ export default async function SettingsPage() {
           </p>
         </div>
         <TimezoneCard currentTimezone={me.timezone} />
+        <ShowThinkingCard current={me.show_thinking} />
       </div>
     </div>
   );

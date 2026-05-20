@@ -9,6 +9,7 @@
   },
   "scripts": {
     "introspect": "drizzle-kit pull",
+    "push": "drizzle-kit push",
     "studio": "drizzle-kit studio"
   },
   "dependencies": {

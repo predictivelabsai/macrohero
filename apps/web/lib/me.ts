@@ -6,6 +6,7 @@ export type Me = {
   user_id: string;
   display_name: string | null;
   timezone: string | null;
+  show_thinking: boolean;
 };
 
 /**
@@ -19,7 +20,7 @@ export const getMe = cache(async (): Promise<Me> => {
   } catch {
     // Resilient default — the rest of the page should still render even if
     // /me is briefly unavailable. Times will just fall back to UTC.
-    return { user_id: "", display_name: null, timezone: null };
+    return { user_id: "", display_name: null, timezone: null, show_thinking: false };
   }
 });
 
