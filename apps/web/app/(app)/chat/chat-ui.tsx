@@ -69,11 +69,13 @@ export function ChatUI({
   initialMessages,
   displayName,
   greeting,
+  showThinking = false,
 }: {
   sessionId: string | null;
   initialMessages: InitialMessage[];
   displayName?: string | null;
   greeting?: string;
+  showThinking?: boolean;
 }) {
   const router = useRouter();
   const [input, setInput] = useState("");
@@ -244,6 +246,7 @@ export function ChatUI({
                   key={m.id}
                   message={m}
                   isStreaming={isStreaming && i === messages.length - 1}
+                  showThinking={showThinking}
                 />
               ))}
               {isStreaming && messages[messages.length - 1]?.role !== "assistant" && (
@@ -337,9 +340,11 @@ function EmptyState({
 function MessageBubble({
   message,
   isStreaming,
+  showThinking,
 }: {
   message: UIMessage;
   isStreaming: boolean;
+  showThinking: boolean;
 }) {
   if (message.role === "user") {
     const text = message.parts
@@ -355,7 +360,13 @@ function MessageBubble({
     );
   }
 
-  return <AssistantBubble message={message} isStreaming={isStreaming} />;
+  return (
+    <AssistantBubble
+      message={message}
+      isStreaming={isStreaming}
+      showThinking={showThinking}
+    />
+  );
 }
 
 // AI SDK v6 attaches custom providerMetadata under a namespace key. We use
@@ -377,9 +388,11 @@ function readPartAgent(p: {
 function AssistantBubble({
   message,
   isStreaming,
+  showThinking,
 }: {
   message: UIMessage;
   isStreaming: boolean;
+  showThinking: boolean;
 }) {
   type AnyPart = {
     type: string;
@@ -444,10 +457,21 @@ function AssistantBubble({
           const agent = readPartAgent(p);
           if (p.type === "text") {
             if (!p.text) return null;
+            // A sub-agent's text is its report back to the supervisor — i.e.
+            // inter-agent communication. With "show thinking" off we replace it
+            // with a compact "communicating with" line (collapsing consecutive
+            // chunks of the same specialist's reply into one).
+            if (!showThinking && agent && agent !== "supervisor") {
+              const prev = renderedParts[i - 1];
+              if (prev?.type === "text" && readPartAgent(prev) === agent) return null;
+              return <AgentCommLine key={key} from={agent} />;
+            }
             return <TextBubble key={key} text={p.text} agent={agent} />;
           }
           if (p.type === "reasoning") {
             if (!p.text) return null;
+            // Reasoning is "thought process" for EVERY agent. It always renders;
+            // ReasoningBlock collapses it by default when thinking is off.
             const isLive = isStreaming && p.state !== "done";
             return (
               <ReasoningBlock
@@ -455,6 +479,7 @@ function AssistantBubble({
                 text={p.text}
                 streaming={isLive}
                 agent={agent}
+                showThinking={showThinking}
               />
             );
           }
@@ -462,7 +487,7 @@ function AssistantBubble({
             return <ScenarioCard key={key} data={p.data} />;
           }
           if (p.type.startsWith("tool-")) {
-            return <ToolPill key={key} part={p} agent={agent} />;
+            return <ToolPill key={key} part={p} agent={agent} showThinking={showThinking} />;
           }
           return null;
         })}
@@ -487,6 +512,20 @@ function AgentBadge({ agent }: { agent: string }) {
     <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground/80">
       {agentLabel(agent)}
     </span>
+  );
+}
+
+// Compact stand-in for a specialist's report back to the supervisor, shown when
+// "show thinking" is off. Mirrors the relabeled transfer pill (supervisor →
+// specialist) for the reverse direction (specialist → supervisor).
+function AgentCommLine({ from }: { from: string }) {
+  return (
+    <div className="flex items-center gap-2">
+      <div className="inline-flex items-center gap-2 self-start rounded-full border border-border/60 bg-muted/40 px-3 py-1 text-xs text-muted-foreground">
+        <ToolDoneIcon kind="agent" />
+        <span>{agentLabel(from)} agent communicating with Supervisor</span>
+      </div>
+    </div>
   );
 }
 
@@ -554,6 +593,7 @@ function fallbackToolLabel(toolType: string): string {
 function ToolPill({
   part,
   agent,
+  showThinking,
 }: {
   part: {
     type: string;
@@ -561,17 +601,29 @@ function ToolPill({
     input?: { query?: string } & Record<string, unknown>;
   };
   agent: string | undefined;
+  showThinking: boolean;
 }) {
   const config = TOOL_PILL_CONFIG[part.type];
   const done = part.state === "output-available";
   const errored = part.state === "output-error";
   const running = !done && !errored;
   const fallbackName = !config ? fallbackToolLabel(part.type) : null;
-  const label = errored
-    ? "Tool error"
-    : config
-      ? running ? config.running : config.done
-      : running ? `Running ${fallbackName}` : `${fallbackName} complete`;
+  // With "show thinking" off, the supervisor→sub-agent handoff is summarized as
+  // a single "communicating with" line instead of the routing/messages.
+  const transferTarget = part.type.startsWith("tool-transfer_to_")
+    ? part.type.replace("tool-transfer_to_", "")
+    : null;
+  const communicatingLabel =
+    !showThinking && !errored && transferTarget
+      ? `Supervisor communicating with ${agentLabel(transferTarget)} agent`
+      : null;
+  const label = communicatingLabel
+    ? communicatingLabel
+    : errored
+      ? "Tool error"
+      : config
+        ? running ? config.running : config.done
+        : running ? `Running ${fallbackName}` : `${fallbackName} complete`;
   const icon = config?.icon ?? "agent";
   // Show the search query inline as additional context once we have it.
   const query =
@@ -594,7 +646,7 @@ function ToolPill({
             “{query.length > 60 ? query.slice(0, 60) + "…" : query}”
           </span>
         )}
-        {agent && (
+        {agent && !communicatingLabel && (
           <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground/60">
             · {agentLabel(agent)}
           </span>
@@ -662,14 +714,21 @@ function ReasoningBlock({
   text,
   streaming,
   agent,
+  showThinking,
 }: {
   text: string;
   streaming: boolean;
   agent?: string;
+  showThinking: boolean;
 }) {
+  // With "show thinking" on, the block auto-expands while the model streams its
+  // reasoning, then collapses when done (the original behaviour). With it off,
+  // it stays collapsed until the user opens it. React only writes the `open`
+  // attribute when this value changes between renders, so a manual toggle in
+  // the off state (value stays `false`) is preserved.
   return (
     <details
-      open={streaming}
+      open={showThinking && streaming}
       className="rounded-lg border border-border/60 bg-muted/30 text-xs text-muted-foreground"
     >
       <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-1.5 select-none">

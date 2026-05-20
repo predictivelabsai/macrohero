@@ -68,7 +68,9 @@ def test_severity_multipliers_are_calibrated() -> None:
     assert SEVERITY_MULTIPLIERS["extreme"] == 3.0
 
 
-def _wire_fakes(monkeypatch, tmp_path: Path, pair_df: pd.DataFrame, factor_df: pd.DataFrame) -> None:
+def _wire_fakes(
+    monkeypatch, tmp_path: Path, pair_df: pd.DataFrame, factor_df: pd.DataFrame
+) -> None:
     from numerics.data import MassiveDataClient
 
     async def fake_resolve(_self, _pair: str) -> str:

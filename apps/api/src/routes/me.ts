@@ -35,7 +35,11 @@ export function makeMeRoutes(opts: MeRoutesOptions): Hono {
 
     await ensureUser(userId);
 
-    const updates: Partial<{ displayName: string | null; timezone: string }> = {};
+    const updates: Partial<{
+      displayName: string | null;
+      timezone: string;
+      showThinking: boolean;
+    }> = {};
     if (parsed.data.display_name !== undefined) {
       // Empty string -> null.
       const val = parsed.data.display_name;
@@ -44,6 +48,9 @@ export function makeMeRoutes(opts: MeRoutesOptions): Hono {
     }
     if (parsed.data.timezone) {
       updates.timezone = parsed.data.timezone;
+    }
+    if (parsed.data.show_thinking !== undefined) {
+      updates.showThinking = parsed.data.show_thinking;
     }
 
     const db = getDb();
@@ -76,5 +83,6 @@ async function fetchUser(userId: string): Promise<MeResponse> {
     user_id: row.id,
     display_name: row.displayName,
     timezone: row.timezone,
+    show_thinking: row.showThinking,
   };
 }

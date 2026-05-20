@@ -18,6 +18,7 @@ export default async function ChatIndexPage() {
       initialMessages={[]}
       displayName={user?.firstName ?? null}
       greeting={timeOfDayGreeting(me.timezone)}
+      showThinking={me.show_thinking}
     />
   );
 }

@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
 import {
+  boolean,
   index,
   integer,
   jsonb,
@@ -22,6 +23,11 @@ export const users = macrohero.table("users", {
   displayName: text("display_name"),
   // Python: String(64). Same approach — length capped via Zod.
   timezone: text("timezone"),
+  // Chat display preference, default off. When false the chat UI keeps every
+  // agent's reasoning collapsed and shows inter-agent messages as compact
+  // "communicating with" lines; when true, reasoning auto-expands while
+  // streaming and sub-agent messages render in full.
+  showThinking: boolean("show_thinking").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .default(sql`now()`),
