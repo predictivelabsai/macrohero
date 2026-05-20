@@ -1,7 +1,8 @@
 """Service-internal orchestration for the FX projection engine.
 
-This is the same logic as the old api/src/macrohero/fx/tool.py minus the
-LangChain @tool wrapper (which is moving to the TS side in Phase 3).
+Pure numerics: builds the factor-shock projection. The LangChain @tool
+wrapper lives on the TypeScript side (packages/tools); this service is a
+plain HTTP function call.
 """
 
 from __future__ import annotations

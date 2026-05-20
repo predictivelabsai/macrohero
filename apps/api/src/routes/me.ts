@@ -37,7 +37,7 @@ export function makeMeRoutes(opts: MeRoutesOptions): Hono {
 
     const updates: Partial<{ displayName: string | null; timezone: string }> = {};
     if (parsed.data.display_name !== undefined) {
-      // Empty string -> null (matches Python behavior in api/src/macrohero/routers/me.py).
+      // Empty string -> null.
       const val = parsed.data.display_name;
       updates.displayName =
         typeof val === "string" && val.trim().length > 0 ? val.trim() : null;

@@ -17,10 +17,9 @@ export interface MakeLLMOptions {
  *
  *   400: the reasoning_content in the thinking mode must be passed back to the api
  *
- * The Python service handles this with `_install_deepseek_reasoning_outgoing()`
- * (api/src/macrohero/chat/agent.py) by monkey-patching `_convert_message_to_dict`.
- * Module-level monkey-patching doesn't work in ESM since the chat_models.js
- * call site uses a local lexical reference, so we subclass instead.
+ * Module-level monkey-patching of `_convert_message_to_dict` doesn't work in
+ * ESM since the chat_models.js call site uses a local lexical reference, so we
+ * subclass and inject `reasoning_content` at the request boundary instead.
  *
  * Strategy: stash the original LangChain messages on `_generate` /
  * `_streamResponseChunks`, then in `completionWithRetry`, inject

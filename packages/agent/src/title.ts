@@ -27,7 +27,6 @@ function clean(raw: string): string {
 /**
  * Summarize a user message into a 4-12 word session title using the flash
  * model. Returns null on any error (missing API key, timeout, empty output).
- * Mirrors api/src/macrohero/chat/title.py.
  */
 export async function summarizeTitle(content: string): Promise<string | null> {
   const cleanedInput = content.split(/\s+/).filter(Boolean).join(" ");
