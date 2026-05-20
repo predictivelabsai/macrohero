@@ -39,6 +39,7 @@ def test_get_factor_by_name_unknown_raises() -> None:
 
 def test_factorspec_is_frozen() -> None:
     import dataclasses
+
     import pytest
 
     spec = FACTOR_UNIVERSE[0]

@@ -30,7 +30,11 @@ def _load_fixtures() -> list[tuple[str, dict]]:
 
 
 @pytest.mark.skipif(not _MASSIVE_KEY, reason="MASSIVE_API_KEY not set; can't reach live data")
-@pytest.mark.parametrize("scenario_id, envelope", _load_fixtures(), ids=lambda v: v if isinstance(v, str) else "")
+@pytest.mark.parametrize(
+    "scenario_id, envelope",
+    _load_fixtures(),
+    ids=lambda v: v if isinstance(v, str) else "",
+)
 @pytest.mark.asyncio
 async def test_golden_fixture(scenario_id: str, envelope: dict, monkeypatch) -> None:
     # Use the same MASSIVE_CACHE_DIR as the api/ that generated the fixtures.
