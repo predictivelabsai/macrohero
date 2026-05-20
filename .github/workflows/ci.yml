@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Cancel superseded runs on the same ref (e.g. rapid pushes to a PR).
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  typescript:
+    name: TypeScript (typecheck + test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # tsc --noEmit across every workspace package (apps/{api,web},
+      # packages/{agent,db,shared,tools}). Catches cross-package breakage —
+      # a change in packages/shared can break apps/api and apps/web.
+      - name: Typecheck
+        run: pnpm -r exec tsc --noEmit
+
+      # Runs the `test` script (vitest run) in every package that defines one:
+      # packages/agent, packages/tools, apps/api.
+      - name: Test
+        run: pnpm -r test
+
+  numerics:
+    name: Numerics (ruff + pytest)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/numerics
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Lint
+        run: uv run ruff check
+
+      # The golden-fixture regression (test_golden_fixtures.py) and other
+      # live-Massive tests skip automatically when MASSIVE_API_KEY is unset.
+      # To run them in CI, add MASSIVE_API_KEY as a repo secret and pass it
+      # through via an `env:` block here.
+      - name: Test
+        run: uv run pytest
