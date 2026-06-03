@@ -105,6 +105,7 @@ export function ChatUI({
             parts.push({
               type: "text",
               text: p.text,
+              state: "done",
               ...(agentMeta ? { providerMetadata: agentMeta } : {}),
             } as UIMessage["parts"][number]);
           } else if (p.kind === "tool") {
@@ -435,19 +436,16 @@ function AssistantBubble({
   }, [isStreaming, contentLen, partsCount]);
 
   const lastPart = renderedParts[renderedParts.length - 1];
-  // Suppress dots when the last visible thing is a tool pill that's still
-  // running (state input-streaming or input-available) — that pill is
-  // already showing a spinner. After the pill completes (output-available)
-  // OR after a text/reasoning bubble, an idle gap before the next chunk
-  // (e.g., between "Routed to research agent" and research's first reasoning
-  // chunk) deserves dots so the user knows work is still ongoing.
-  const lastPartIsRunningPill =
+  // Only show idle dots before any assistant content arrives, or after a
+  // completed tool pill while waiting for the next graph node to speak. Once
+  // text/reasoning completes, the stream may still be closing/persisting, but
+  // showing dots there makes the final answer look unfinished.
+  const lastPartIsCompletedToolPill =
     !!lastPart &&
     lastPart.type.startsWith("tool-") &&
-    lastPart.state !== "output-available" &&
-    lastPart.state !== "output-error";
+    lastPart.state === "output-available";
   const showDotsPlaceholder =
-    isStreaming && (renderedParts.length === 0 || (idle && !lastPartIsRunningPill));
+    isStreaming && (renderedParts.length === 0 || (idle && lastPartIsCompletedToolPill));
 
   return (
     <div className="flex justify-start">
@@ -464,7 +462,7 @@ function AssistantBubble({
             if (!showThinking && agent && agent !== "supervisor") {
               const prev = renderedParts[i - 1];
               if (prev?.type === "text" && readPartAgent(prev) === agent) return null;
-              return <AgentCommLine key={key} from={agent} />;
+              return <AgentCommLine key={key} from={agent} done={p.state === "done"} />;
             }
             return <TextBubble key={key} text={p.text} agent={agent} />;
           }
@@ -518,12 +516,16 @@ function AgentBadge({ agent }: { agent: string }) {
 // Compact stand-in for a specialist's report back to the supervisor, shown when
 // "show thinking" is off. Mirrors the relabeled transfer pill (supervisor →
 // specialist) for the reverse direction (specialist → supervisor).
-function AgentCommLine({ from }: { from: string }) {
+function AgentCommLine({ from, done }: { from: string; done: boolean }) {
+  const label = done
+    ? `${agentLabel(from)} agent finished communicating with Supervisor`
+    : `${agentLabel(from)} agent communicating with Supervisor`;
+
   return (
     <div className="flex items-center gap-2">
       <div className="inline-flex items-center gap-2 self-start rounded-full border border-border/60 bg-muted/40 px-3 py-1 text-xs text-muted-foreground">
-        <ToolDoneIcon kind="agent" />
-        <span>{agentLabel(from)} agent communicating with Supervisor</span>
+        {done ? <ToolDoneIcon kind="agent" /> : <Spinner />}
+        <span>{label}</span>
       </div>
     </div>
   );
@@ -613,12 +615,14 @@ function ToolPill({
   const transferTarget = part.type.startsWith("tool-transfer_to_")
     ? part.type.replace("tool-transfer_to_", "")
     : null;
-  const communicatingLabel =
+  const transferLabel =
     !showThinking && !errored && transferTarget
-      ? `Supervisor communicating with ${agentLabel(transferTarget)} agent`
+      ? running
+        ? `Supervisor communicating with ${agentLabel(transferTarget)} agent`
+        : `Supervisor finished communicating with ${agentLabel(transferTarget)} agent`
       : null;
-  const label = communicatingLabel
-    ? communicatingLabel
+  const label = transferLabel
+    ? transferLabel
     : errored
       ? "Tool error"
       : config
@@ -646,7 +650,7 @@ function ToolPill({
             “{query.length > 60 ? query.slice(0, 60) + "…" : query}”
           </span>
         )}
-        {agent && !communicatingLabel && (
+        {agent && !transferLabel && (
           <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground/60">
             · {agentLabel(agent)}
           </span>
