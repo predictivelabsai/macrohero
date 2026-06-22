@@ -9,8 +9,10 @@ import { useAppChrome } from "../app-chrome";
 
 type State =
   | { kind: "loading" }
-  | { kind: "ready"; items: NewsItem[] }
+  | { kind: "ready"; items: NewsItem[]; updatedAt: string }
   | { kind: "error"; message: string };
+
+const NEWS_REFRESH_INTERVAL_MS = 60_000;
 
 export function NewsPane() {
   const [state, setState] = useState<State>({ kind: "loading" });
@@ -18,25 +20,51 @@ export function NewsPane() {
 
   useEffect(() => {
     let cancelled = false;
-    (async () => {
+    let controller: AbortController | null = null;
+
+    async function loadNews() {
+      controller?.abort();
+      controller = new AbortController();
       try {
-        const res = await fetch("/api/news", { cache: "no-store" });
+        const res = await fetch("/api/news", {
+          cache: "no-store",
+          signal: controller.signal,
+        });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = (await res.json()) as { items: NewsItem[] };
-        if (!cancelled) setState({ kind: "ready", items: data.items });
-      } catch (err) {
         if (!cancelled) {
           setState({
-            kind: "error",
-            message: err instanceof Error ? err.message : "Failed to load",
+            kind: "ready",
+            items: data.items,
+            updatedAt: new Date().toISOString(),
+          });
+        }
+      } catch (err) {
+        if (err instanceof Error && err.name === "AbortError") return;
+        if (!cancelled) {
+          const message = err instanceof Error ? err.message : "Failed to load";
+          setState((current) => {
+            if (current.kind === "ready") return current;
+            return { kind: "error", message };
           });
         }
       }
-    })();
+    }
+
+    void loadNews();
+    const refreshInterval = window.setInterval(() => {
+      void loadNews();
+    }, NEWS_REFRESH_INTERVAL_MS);
+
     return () => {
       cancelled = true;
+      window.clearInterval(refreshInterval);
+      controller?.abort();
     };
   }, []);
+
+  const statusText =
+    state.kind === "ready" ? `Updated ${formatClockTime(state.updatedAt)}` : "FX wires · central banks";
 
   const header = (
     <div className="border-b border-border px-4 py-3">
@@ -44,7 +72,7 @@ export function NewsPane() {
         <LiveNewsIcon />
         Live news
       </h2>
-      <p className="text-xs text-muted-foreground">Fed · ECB · BoE · FT</p>
+      <p className="text-xs text-muted-foreground">{statusText}</p>
     </div>
   );
 
@@ -207,5 +235,14 @@ function formatTime(iso: string): string {
     month: "short",
     day: "numeric",
     year: d.getFullYear() === new Date().getFullYear() ? undefined : "numeric",
+  });
+}
+
+function formatClockTime(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleTimeString(undefined, {
+    hour: "numeric",
+    minute: "2-digit",
   });
 }
