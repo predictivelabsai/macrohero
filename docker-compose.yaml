@@ -62,6 +62,18 @@ services:
       context: ./apps/numerics
       dockerfile: Dockerfile
     environment:
+      # Port-suffixed magic var (same pattern as api's 8002) so Coolify's
+      # Traefik routes the generated "numerics" FQDN to the container's 8001
+      # listener. Set the domain in Coolify's "Domains for numerics" field.
+      #
+      # SECURITY: numerics has no auth. It is meant to be reached internally
+      # by sibling services at http://numerics:8001 (e.g. the TS api, and
+      # AssetHero if it shares this Docker network). Only attach a PUBLIC
+      # domain here if you add authentication first — otherwise anyone can
+      # run backtests/projections and burn the Massive API quota. For
+      # internal-only consumers, leave the Coolify domain blank; this var is
+      # harmless when unset.
+      SERVICE_FQDN_NUMERICS_8001: ${SERVICE_FQDN_NUMERICS_8001:-}
       MASSIVE_API_KEY: ${MASSIVE_API_KEY}
       MASSIVE_CACHE_DIR: /app/.cache/massive
     expose:

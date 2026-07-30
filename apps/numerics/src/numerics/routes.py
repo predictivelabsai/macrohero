@@ -1,11 +1,12 @@
 """HTTP routes for the numerics service.
 
-Internal service: no auth, no CORS, no rate limiting. Exposes three endpoints
-that the TS apps/api consumes:
+Internal service: no auth, no CORS, no rate limiting. Exposes endpoints that
+the TS apps/api (and other internal verticals, e.g. AssetHero) consume:
 
-- POST /v1/projection — run the deterministic FX projection.
-- GET  /v1/factors    — return the factor universe (used by codegen).
-- GET  /healthz       — liveness check for docker-compose.
+- POST /v1/projection        — run the deterministic FX projection.
+- POST /v1/backtest/momentum — run a momentum FX backtest.
+- GET  /v1/factors           — return the factor universe (used by codegen).
+- GET  /healthz              — liveness check for docker-compose.
 """
 
 from __future__ import annotations
@@ -15,6 +16,10 @@ from typing import Any
 
 from fastapi import APIRouter
 
+from numerics.backtest_service import (
+    RunMomentumBacktestArgs,
+    run_momentum_backtest_impl,
+)
 from numerics.factors import FACTOR_UNIVERSE
 from numerics.projection_service import (
     RunFactorProjectionArgs,
@@ -50,3 +55,16 @@ async def run_projection(args: RunFactorProjectionArgs) -> dict[str, Any]:
     return 422.
     """
     return await run_factor_projection_impl(args)
+
+
+@router.post("/v1/backtest/momentum")
+async def run_backtest_momentum(args: RunMomentumBacktestArgs) -> dict[str, Any]:
+    """Run a momentum FX backtest over Massive daily bars.
+
+    Domain-level problems (unconfigured key, invalid pair, insufficient data)
+    come back in the body's `diagnostics.error` envelope with HTTP 200, the
+    same convention as `/v1/projection`. Pydantic validation failures return
+    422. On success, `metrics` and `trades` are populated and
+    `diagnostics.error` is null.
+    """
+    return await run_momentum_backtest_impl(args)
