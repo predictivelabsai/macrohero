@@ -14,6 +14,10 @@ class Settings(BaseSettings):
 
     massive_api_key: str | None = Field(default=None, alias="MASSIVE_API_KEY")
     massive_cache_dir: str = Field(default=_DEFAULT_CACHE_DIR, alias="MASSIVE_CACHE_DIR")
+    # Optional shared-secret gate for /v1/* routes. When unset, all callers are
+    # allowed (local dev, existing internal callers). When set, requests must
+    # send header `X-Service-Key: <value>`.
+    numerics_service_key: str | None = Field(default=None, alias="NUMERICS_SERVICE_KEY")
 
 
 @lru_cache(maxsize=1)

@@ -20,11 +20,11 @@ from __future__ import annotations
 
 from datetime import timedelta
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import numpy as np
 import pandas as pd
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from numerics.config import get_settings
 from numerics.data import (
@@ -38,6 +38,9 @@ from numerics.data import (
 # How many trading days ahead an open position is allowed to run before it is
 # closed at market. Matches the reference implementation.
 _MAX_HOLD_BARS = 10
+
+# Convenience aliases callers can pass as `period` instead of raw `history_days`.
+_PERIOD_TO_DAYS: dict[str, int] = {"3mo": 90, "6mo": 180, "1y": 365, "2y": 730}
 
 
 class RunMomentumBacktestArgs(BaseModel):
@@ -60,6 +63,77 @@ class RunMomentumBacktestArgs(BaseModel):
         default=10, gt=0, le=100, description="Position size as %% of capital."
     )
     initial_capital: float = Field(default=100_000, gt=0)
+    period: Literal["3mo", "6mo", "1y", "2y"] | None = Field(
+        default=None,
+        description=(
+            "Convenience alias for history_days: 3mo=90, 6mo=180, 1y=365, 2y=730. "
+            "Applied only when history_days is not explicitly set; history_days "
+            "remains the canonical field."
+        ),
+    )
+
+    @model_validator(mode="after")
+    def _apply_period_alias(self) -> RunMomentumBacktestArgs:
+        # Only sugar: if the caller passed `period` and left `history_days` at its
+        # default, translate. An explicit history_days always wins.
+        if self.period is not None and "history_days" not in self.model_fields_set:
+            self.history_days = _PERIOD_TO_DAYS[self.period]
+        return self
+
+
+# FX pairs the momentum backtest supports. Small constant here; the actual
+# validity check is Massive's resolve_fx_pair at call time. Consumers read this
+# via GET /v1/catalog rather than hardcoding their own list.
+SUPPORTED_PAIRS: tuple[str, ...] = (
+    "EUR/USD",
+    "GBP/USD",
+    "USD/JPY",
+    "USD/CHF",
+    "AUD/USD",
+    "USD/CAD",
+)
+
+# Numeric params exposed in the catalog, in display order. Their ranges are
+# derived from the RunMomentumBacktestArgs Field constraints below — one source
+# of truth, no second hardcoded copy.
+_CATALOG_PARAMS: tuple[str, ...] = (
+    "history_days",
+    "lookback",
+    "momentum_threshold",
+    "take_profit",
+    "stop_loss",
+    "position_size_pct",
+)
+
+
+def _param_spec(field_name: str) -> dict[str, float | int]:
+    """Read {min, max, default} for a field from its annotated-type constraints."""
+    field = RunMomentumBacktestArgs.model_fields[field_name]
+    spec: dict[str, float | int] = {}
+    for m in field.metadata:
+        if hasattr(m, "ge"):
+            spec["min"] = m.ge
+        if hasattr(m, "gt"):
+            spec["min"] = m.gt
+        if hasattr(m, "le"):
+            spec["max"] = m.le
+        if hasattr(m, "lt"):
+            spec["max"] = m.lt
+    spec["default"] = field.default
+    return spec
+
+
+def build_catalog() -> dict[str, Any]:
+    """Discovery payload: strategies, supported pairs, and param ranges.
+
+    Param ranges come straight from the request model's Field constraints, so
+    the catalog can never drift from what the endpoint actually accepts.
+    """
+    return {
+        "strategies": ["momentum"],
+        "pairs": list(SUPPORTED_PAIRS),
+        "params": {name: _param_spec(name) for name in _CATALOG_PARAMS},
+    }
 
 
 def _empty_metrics(initial_capital: float) -> dict[str, float | int]:
@@ -119,6 +193,7 @@ def _calculate_metrics(trades: list[dict], initial_capital: float) -> dict[str, 
 
 
 def _run_momentum(
+    symbol: str,
     dates: list[str],
     closes: list[float],
     highs: list[float],
@@ -193,6 +268,8 @@ def _run_momentum(
                 "pnl": round(pnl, 2),
                 "pnl_pct": round(pnl_pct, 2),
                 "capital_after": round(capital, 2),
+                "units": round(units, 2),
+                "symbol": symbol,
             }
         )
         i = exit_idx + 1
@@ -277,6 +354,6 @@ async def run_momentum_backtest_impl(args: RunMomentumBacktestArgs) -> dict[str,
             f"for lookback {args.lookback}",
         )
 
-    trades = _run_momentum(dates, closes, highs, lows, args)
+    trades = _run_momentum(symbol, dates, closes, highs, lows, args)
     metrics = _calculate_metrics(trades, args.initial_capital)
     return _result(args, symbol, metrics, trades, n_bars=len(closes))

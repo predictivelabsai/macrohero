@@ -1,12 +1,23 @@
 """HTTP routes for the numerics service.
 
-Internal service: no auth, no CORS, no rate limiting. Exposes endpoints that
-the TS apps/api (and other internal verticals, e.g. AssetHero) consume:
+Exposes endpoints that the TS apps/api and other internal verticals (e.g.
+AssetHero) consume:
 
+- GET  /healthz              — liveness check for docker-compose (always open).
+- GET  /v1/catalog           — strategies, supported pairs, and param ranges.
+- GET  /v1/factors           — return the factor universe (used by codegen).
 - POST /v1/projection        — run the deterministic FX projection.
 - POST /v1/backtest/momentum — run a momentum FX backtest.
-- GET  /v1/factors           — return the factor universe (used by codegen).
-- GET  /healthz              — liveness check for docker-compose.
+
+Auth: the service is optionally gated by a shared secret. If env
+`NUMERICS_SERVICE_KEY` is set, every `/v1/*` request must send header
+`X-Service-Key: <value>` (401 on mismatch). If unset, all callers are allowed
+so local dev and existing internal callers keep working. `/healthz` is never
+gated.
+
+Convention: domain-level problems (invalid pair, insufficient data, unconfigured
+key, etc.) come back in the body's `diagnostics.error` envelope with HTTP 200,
+matching the LangChain tool wrapper. Pydantic validation failures return 422.
 """
 
 from __future__ import annotations
@@ -14,19 +25,36 @@ from __future__ import annotations
 import dataclasses
 from typing import Any
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends, Header, HTTPException
 
 from numerics.backtest_service import (
     RunMomentumBacktestArgs,
+    build_catalog,
     run_momentum_backtest_impl,
 )
+from numerics.config import get_settings
 from numerics.factors import FACTOR_UNIVERSE
 from numerics.projection_service import (
     RunFactorProjectionArgs,
     run_factor_projection_impl,
 )
 
+
+async def require_service_key(x_service_key: str | None = Header(default=None)) -> None:
+    """Gate /v1/* with a shared secret when NUMERICS_SERVICE_KEY is configured.
+
+    No-op when the env var is unset (local dev / existing internal callers).
+    Never reveals the expected value.
+    """
+    expected = get_settings().numerics_service_key
+    if expected and x_service_key != expected:
+        raise HTTPException(status_code=401, detail="invalid or missing X-Service-Key")
+
+
 router = APIRouter()
+
+# All /v1 routes share the optional service-key gate.
+v1 = APIRouter(prefix="/v1", dependencies=[Depends(require_service_key)])
 
 
 @router.get("/healthz")
@@ -34,7 +62,18 @@ async def healthz() -> dict[str, str]:
     return {"status": "ok"}
 
 
-@router.get("/v1/factors")
+@v1.get("/catalog")
+async def catalog() -> dict[str, Any]:
+    """Discovery payload so consumers build their UI without hardcoding.
+
+    Returns the available strategies, supported FX pairs, and the numeric
+    parameter ranges (min/max/default) derived from the backtest request
+    model's own Field constraints.
+    """
+    return build_catalog()
+
+
+@v1.get("/factors")
 async def list_factors() -> dict[str, list[dict[str, Any]]]:
     """Return the factor universe.
 
@@ -44,7 +83,7 @@ async def list_factors() -> dict[str, list[dict[str, Any]]]:
     return {"factors": [dataclasses.asdict(f) for f in FACTOR_UNIVERSE]}
 
 
-@router.post("/v1/projection")
+@v1.post("/projection")
 async def run_projection(args: RunFactorProjectionArgs) -> dict[str, Any]:
     """Run the deterministic FX factor projection.
 
@@ -57,7 +96,7 @@ async def run_projection(args: RunFactorProjectionArgs) -> dict[str, Any]:
     return await run_factor_projection_impl(args)
 
 
-@router.post("/v1/backtest/momentum")
+@v1.post("/backtest/momentum")
 async def run_backtest_momentum(args: RunMomentumBacktestArgs) -> dict[str, Any]:
     """Run a momentum FX backtest over Massive daily bars.
 
@@ -68,3 +107,6 @@ async def run_backtest_momentum(args: RunMomentumBacktestArgs) -> dict[str, Any]
     `diagnostics.error` is null.
     """
     return await run_momentum_backtest_impl(args)
+
+
+router.include_router(v1)

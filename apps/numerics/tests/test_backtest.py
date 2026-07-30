@@ -185,3 +185,121 @@ def test_route_momentum_requires_pair(fake_settings) -> None:
     client = TestClient(create_app())
     resp = client.post("/v1/backtest/momentum", json={})
     assert resp.status_code == 422
+
+
+# ------------------------------------------------------------- units + symbol
+
+async def test_trades_include_units_and_symbol(
+    fake_settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _patch_market(monkeypatch, _uptrend(60))
+    result = await run_momentum_backtest_impl(RunMomentumBacktestArgs(pair="EUR/USD"))
+
+    assert result["trades"], "expected at least one trade"
+    for t in result["trades"]:
+        assert "units" in t and isinstance(t["units"], float)
+        assert t["units"] > 0
+        assert t["symbol"] == "C:EURUSD"
+    # Existing keys are still present (additive change).
+    first = result["trades"][0]
+    for key in ("entry_date", "exit_date", "direction", "pnl", "capital_after"):
+        assert key in first
+
+
+# ------------------------------------------------------------- period alias
+
+def test_period_maps_to_history_days() -> None:
+    assert RunMomentumBacktestArgs(pair="EURUSD", period="3mo").history_days == 90
+    assert RunMomentumBacktestArgs(pair="EURUSD", period="6mo").history_days == 180
+    assert RunMomentumBacktestArgs(pair="EURUSD", period="1y").history_days == 365
+    assert RunMomentumBacktestArgs(pair="EURUSD", period="2y").history_days == 730
+
+
+def test_explicit_history_days_wins_over_period() -> None:
+    # period is sugar; an explicit history_days must not be overwritten.
+    args = RunMomentumBacktestArgs(pair="EURUSD", period="2y", history_days=500)
+    assert args.history_days == 500
+
+
+def test_no_period_keeps_default_history_days() -> None:
+    assert RunMomentumBacktestArgs(pair="EURUSD").history_days == 365
+
+
+def test_route_accepts_period(fake_settings, monkeypatch: pytest.MonkeyPatch) -> None:
+    _patch_market(monkeypatch, _uptrend(60))
+    client = TestClient(create_app())
+    resp = client.post("/v1/backtest/momentum", json={"pair": "EUR/USD", "period": "6mo"})
+    assert resp.status_code == 200
+    assert resp.json()["params"]["history_days"] == 180
+
+
+# ----------------------------------------------------------------- catalog
+
+def test_catalog_shape(fake_settings) -> None:
+    client = TestClient(create_app())
+    resp = client.get("/v1/catalog")
+    assert resp.status_code == 200
+    body = resp.json()
+
+    assert body["strategies"] == ["momentum"]
+    assert body["pairs"] == ["EUR/USD", "GBP/USD", "USD/JPY", "USD/CHF", "AUD/USD", "USD/CAD"]
+
+    params = body["params"]
+    assert set(params) == {
+        "history_days",
+        "lookback",
+        "momentum_threshold",
+        "take_profit",
+        "stop_loss",
+        "position_size_pct",
+    }
+    # Ranges come straight from the model's Field constraints.
+    assert params["history_days"] == {"min": 30, "max": 2000, "default": 365}
+    assert params["lookback"] == {"min": 5, "max": 60, "default": 20}
+    assert params["momentum_threshold"] == {"min": 0, "max": 10, "default": 0.5}
+    assert params["take_profit"] == {"min": 0, "max": 10, "default": 1.0}
+    assert params["stop_loss"] == {"min": 0, "max": 10, "default": 0.5}
+    assert params["position_size_pct"] == {"min": 0, "max": 100, "default": 10}
+
+
+# -------------------------------------------------------------- service auth
+
+def _patch_service_key(monkeypatch: pytest.MonkeyPatch, key: str | None) -> None:
+    fake = SimpleNamespace(
+        numerics_service_key=key, massive_api_key="k", massive_cache_dir="/tmp/x"
+    )
+    monkeypatch.setattr("numerics.routes.get_settings", lambda: fake)
+
+
+def test_auth_allows_all_when_key_unset(monkeypatch: pytest.MonkeyPatch) -> None:
+    _patch_service_key(monkeypatch, None)
+    client = TestClient(create_app())
+    assert client.get("/v1/catalog").status_code == 200
+
+
+def test_auth_rejects_missing_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    _patch_service_key(monkeypatch, "s3cret")
+    client = TestClient(create_app())
+    resp = client.get("/v1/catalog")
+    assert resp.status_code == 401
+
+
+def test_auth_rejects_wrong_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    _patch_service_key(monkeypatch, "s3cret")
+    client = TestClient(create_app())
+    resp = client.get("/v1/catalog", headers={"X-Service-Key": "nope"})
+    assert resp.status_code == 401
+
+
+def test_auth_accepts_correct_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    _patch_service_key(monkeypatch, "s3cret")
+    client = TestClient(create_app())
+    resp = client.get("/v1/catalog", headers={"X-Service-Key": "s3cret"})
+    assert resp.status_code == 200
+
+
+def test_healthz_never_gated(monkeypatch: pytest.MonkeyPatch) -> None:
+    _patch_service_key(monkeypatch, "s3cret")
+    client = TestClient(create_app())
+    # /healthz is open even when the service key is set and no header is sent.
+    assert client.get("/healthz").status_code == 200
