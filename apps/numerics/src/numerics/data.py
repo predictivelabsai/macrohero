@@ -42,6 +42,13 @@ def _cache_path_for(cache_dir: Path, symbol: str, start: date, end: date) -> Pat
     return cache_dir / safe / f"{start.isoformat()}_{end.isoformat()}.parquet"
 
 
+def _ohlc_cache_path_for(cache_dir: Path, symbol: str, start: date, end: date) -> Path:
+    # Separate namespace from the close-only cache: the two hold different
+    # column sets, so they must never read each other's parquet files.
+    safe = _symbol_safe(symbol)
+    return cache_dir / safe / f"{start.isoformat()}_{end.isoformat()}_ohlc.parquet"
+
+
 def _yesterday_utc() -> date:
     # Massive publishes EOD bars after the session close. Bucket to "yesterday"
     # so we never cache an in-progress bar.
@@ -175,6 +182,74 @@ class MassiveDataClient:
 
         rows = [
             {"date": pd.to_datetime(a.timestamp, unit="ms").date(), "close": a.close}
+            for a in aggs
+        ]
+        df = pd.DataFrame(rows)
+        df = df.set_index("date")
+        df.index = pd.to_datetime(df.index)
+        return df
+
+    async def fetch_ohlc_bars(self, symbol: str, start: date, end: date) -> pd.DataFrame:
+        """Return a DataFrame with `open`, `high`, `low`, `close` columns by date.
+
+        Parallel to :meth:`fetch_bars` (which returns close only). The backtest
+        engine needs intrabar highs/lows to resolve take-profit / stop-loss
+        touches, so this keeps its own cache namespace and never disturbs the
+        close-only cache the projection engine relies on.
+        """
+        effective_end = min(end, _yesterday_utc())
+        if effective_end < start:
+            raise InsufficientDataError(
+                f"requested window [{start}, {end}] is before usable data"
+            )
+
+        cache_path = _ohlc_cache_path_for(self._cache_dir, symbol, start, effective_end)
+        if cache_path.exists():
+            try:
+                cached = pd.read_parquet(cache_path)
+                cached.index = cached.index.astype("datetime64[s]")
+                return cached
+            except Exception:
+                cache_path.unlink(missing_ok=True)
+
+        df = await self._fetch_ohlc_remote(symbol, start, effective_end)
+        cache_path.parent.mkdir(parents=True, exist_ok=True)
+        tmp_path = cache_path.with_suffix(".parquet.tmp")
+        df.to_parquet(tmp_path)
+        tmp_path.replace(cache_path)
+        return df
+
+    async def _fetch_ohlc_remote(self, symbol: str, start: date, end: date) -> pd.DataFrame:
+        def _call() -> list:
+            try:
+                return list(
+                    self._sdk.list_aggs(
+                        symbol,
+                        1,
+                        "day",
+                        start.isoformat(),
+                        end.isoformat(),
+                        limit=50000,
+                    )
+                )
+            except BadResponse as exc:
+                raise _map_exc(exc, symbol) from exc
+            except AuthError as exc:
+                raise MassiveAuthError(f"Massive auth failed: {exc}") from exc
+
+        aggs = await asyncio.to_thread(_call)
+
+        if not aggs:
+            raise InsufficientDataError(f"no bars returned for {symbol} [{start}, {end}]")
+
+        rows = [
+            {
+                "date": pd.to_datetime(a.timestamp, unit="ms").date(),
+                "open": a.open,
+                "high": a.high,
+                "low": a.low,
+                "close": a.close,
+            }
             for a in aggs
         ]
         df = pd.DataFrame(rows)
