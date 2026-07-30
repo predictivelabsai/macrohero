@@ -53,9 +53,10 @@ test("news sources are focused on FX wires and major FX central banks", () => {
 });
 
 test("parseNewsFeed handles central-bank RDF feeds with dc:date timestamps", () => {
-  const parseNewsFeed = newsModule.parseNewsFeed as
-    | ((xml: string, source: string) => NewsItem[])
-    | undefined;
+  const parseNewsFeed = newsModule.parseNewsFeed as (
+    xml: string,
+    source: string,
+  ) => NewsItem[];
 
   assert.equal(typeof parseNewsFeed, "function", "parseNewsFeed should be exported");
 
@@ -81,9 +82,10 @@ test("parseNewsFeed handles central-bank RDF feeds with dc:date timestamps", () 
 });
 
 test("filterCurrentNewsItems excludes future-dated feed entries", () => {
-  const filterCurrentNewsItems = newsModule.filterCurrentNewsItems as
-    | ((items: NewsItem[], nowMs: number) => NewsItem[])
-    | undefined;
+  const filterCurrentNewsItems = newsModule.filterCurrentNewsItems as (
+    items: NewsItem[],
+    nowMs: number,
+  ) => NewsItem[];
 
   assert.equal(
     typeof filterCurrentNewsItems,
