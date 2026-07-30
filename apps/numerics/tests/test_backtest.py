@@ -51,7 +51,8 @@ def _uptrend(n: int, slope: float = 0.002, base: float = 1.1000) -> list[Agg]:
     aggs = []
     for k in range(n):
         close = base + k * slope
-        aggs.append(_make_ohlc_agg(close, close + 0.0005, close - 0.0005, close, _START_MS + k * _DAY_MS))
+        ts = _START_MS + k * _DAY_MS
+        aggs.append(_make_ohlc_agg(close, close + 0.0005, close - 0.0005, close, ts))
     return aggs
 
 
