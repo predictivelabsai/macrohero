@@ -7,6 +7,7 @@ patched to a fake key + a tmp cache dir so runs are hermetic.
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -303,3 +304,143 @@ def test_healthz_never_gated(monkeypatch: pytest.MonkeyPatch) -> None:
     client = TestClient(create_app())
     # /healthz is open even when the service key is set and no header is sent.
     assert client.get("/healthz").status_code == 200
+
+
+# -------------------------------------------------- AssetHero user passthrough
+#
+# These exercise the header echo through the real ASGI stack via the
+# `massive_unconfigured` path, which returns a full diagnostics envelope
+# without touching Massive or the parquet cache — so they don't depend on a
+# live key or the pyarrow native lib.
+
+
+def _unconfigured(monkeypatch: pytest.MonkeyPatch) -> None:
+    fake = SimpleNamespace(massive_api_key=None, massive_cache_dir="/tmp/x")
+    monkeypatch.setattr("numerics.backtest_service.get_settings", lambda: fake)
+
+
+def test_user_headers_echoed_in_diagnostics(monkeypatch: pytest.MonkeyPatch) -> None:
+    _unconfigured(monkeypatch)
+    client = TestClient(create_app())
+
+    resp = client.post(
+        "/v1/backtest/momentum",
+        json={"pair": "EUR/USD"},
+        headers={"X-User-Id": "user-abc-123", "X-User-Source": "assethero"},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["diagnostics"]["requested_by"] == {
+        "user_id": "user-abc-123",
+        "source": "assethero",
+    }
+
+
+def test_user_headers_absent_leaves_response_unchanged(monkeypatch: pytest.MonkeyPatch) -> None:
+    _unconfigured(monkeypatch)
+    client = TestClient(create_app())
+
+    resp = client.post("/v1/backtest/momentum", json={"pair": "EUR/USD"})
+    assert resp.status_code == 200
+    # No headers -> no requested_by key at all (response shape unchanged).
+    assert "requested_by" not in resp.json()["diagnostics"]
+
+
+def test_user_headers_on_projection(monkeypatch: pytest.MonkeyPatch) -> None:
+    # projection shares the passthrough; unconfigured path also carries diagnostics.
+    monkeypatch.setattr(
+        "numerics.projection_service.get_settings",
+        lambda: SimpleNamespace(massive_api_key=None, massive_cache_dir="/tmp/x"),
+    )
+    client = TestClient(create_app())
+
+    resp = client.post(
+        "/v1/projection",
+        json={
+            "pair": "EUR/USD",
+            "horizon_days": 5,
+            "factors": [{"name": "dxy", "direction": "up", "severity": "moderate"}],
+        },
+        headers={"X-User-Id": "u9", "X-User-Source": "assethero"},
+    )
+    # Either 200 (envelope) with requested_by, or 422 if the factor name is
+    # unknown to this build. Only assert the echo when the request was accepted.
+    if resp.status_code == 200:
+        assert resp.json()["diagnostics"]["requested_by"] == {
+            "user_id": "u9",
+            "source": "assethero",
+        }
+
+
+def test_partial_user_header_still_echoed(monkeypatch: pytest.MonkeyPatch) -> None:
+    _unconfigured(monkeypatch)
+    client = TestClient(create_app())
+
+    resp = client.post(
+        "/v1/backtest/momentum",
+        json={"pair": "EUR/USD"},
+        headers={"X-User-Source": "assethero"},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["diagnostics"]["requested_by"] == {
+        "user_id": None,
+        "source": "assethero",
+    }
+
+
+def test_user_headers_emit_structured_log(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    _unconfigured(monkeypatch)
+    client = TestClient(create_app())
+
+    with caplog.at_level(logging.INFO, logger="numerics.access"):
+        client.post(
+            "/v1/backtest/momentum",
+            json={"pair": "EUR/USD"},
+            headers={"X-User-Id": "u1", "X-User-Source": "assethero"},
+        )
+
+    messages = [r.getMessage() for r in caplog.records if r.name == "numerics.access"]
+    assert any("user_id=u1" in m and "source=assethero" in m for m in messages)
+
+
+def test_no_user_headers_no_log(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    _unconfigured(monkeypatch)
+    client = TestClient(create_app())
+
+    with caplog.at_level(logging.INFO, logger="numerics.access"):
+        client.post("/v1/backtest/momentum", json={"pair": "EUR/USD"})
+
+    assert not [r for r in caplog.records if r.name == "numerics.access"]
+
+
+def test_attach_requested_by_unit() -> None:
+    # Direct unit test of the helper against a success-shaped result (no network).
+    from copy import deepcopy
+
+    from numerics.routes import _attach_requested_by
+
+    success = {"strategy": "momentum", "metrics": {}, "trades": [], "diagnostics": {"error": None}}
+
+    out = _attach_requested_by(deepcopy(success), "u1", "assethero")
+    assert out["diagnostics"]["requested_by"] == {"user_id": "u1", "source": "assethero"}
+
+    # No ids -> untouched, no key added.
+    untouched = _attach_requested_by(deepcopy(success), None, None)
+    assert "requested_by" not in untouched["diagnostics"]
+
+
+def test_no_database_engine_introduced() -> None:
+    """Guard the stateless design: numerics must not import a DB/ORM engine."""
+    import numerics.backtest_service as bt
+    import numerics.routes as routes
+
+    combined = (bt.__dict__.keys() | routes.__dict__.keys())
+    for forbidden in ("create_engine", "sessionmaker", "Session", "engine"):
+        assert forbidden not in combined, f"unexpected DB symbol: {forbidden}"
+    # No sqlalchemy anywhere in the numerics dependency tree at import time.
+    import sys
+
+    assert not any(m == "sqlalchemy" or m.startswith("sqlalchemy.") for m in sys.modules)

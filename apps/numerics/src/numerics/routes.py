@@ -23,6 +23,7 @@ matching the LangChain tool wrapper. Pydantic validation failures return 422.
 from __future__ import annotations
 
 import dataclasses
+import logging
 from typing import Any
 
 from fastapi import APIRouter, Depends, Header, HTTPException
@@ -38,6 +39,33 @@ from numerics.projection_service import (
     RunFactorProjectionArgs,
     run_factor_projection_impl,
 )
+
+logger = logging.getLogger("numerics.access")
+
+
+def _attach_requested_by(
+    result: dict[str, Any], user_id: str | None, source: str | None
+) -> dict[str, Any]:
+    """Echo the calling user into diagnostics for traceability. Stateless — no
+    persistence; this is correlation metadata only.
+
+    Absent headers leave the response untouched. Only the correlation ids
+    (never secrets) are logged.
+    """
+    if user_id is None and source is None:
+        return result
+
+    diagnostics = result.get("diagnostics")
+    if isinstance(diagnostics, dict):
+        diagnostics["requested_by"] = {"user_id": user_id, "source": source}
+
+    logger.info(
+        "numerics request user_id=%s source=%s strategy=%s",
+        user_id,
+        source,
+        result.get("strategy"),
+    )
+    return result
 
 
 async def require_service_key(x_service_key: str | None = Header(default=None)) -> None:
@@ -84,7 +112,11 @@ async def list_factors() -> dict[str, list[dict[str, Any]]]:
 
 
 @v1.post("/projection")
-async def run_projection(args: RunFactorProjectionArgs) -> dict[str, Any]:
+async def run_projection(
+    args: RunFactorProjectionArgs,
+    x_user_id: str | None = Header(default=None),
+    x_user_source: str | None = Header(default=None),
+) -> dict[str, Any]:
     """Run the deterministic FX factor projection.
 
     Returns the same dict shape as today's `run_factor_projection_impl(...)`.
@@ -92,12 +124,20 @@ async def run_projection(args: RunFactorProjectionArgs) -> dict[str, Any]:
     the body's `diagnostics.error` envelope with HTTP 200 — matching how the
     LangChain tool wrapper presents them. Pydantic validation failures still
     return 422.
+
+    Optional `X-User-Id` / `X-User-Source` headers are echoed into
+    `diagnostics.requested_by` for traceability. They are never persisted.
     """
-    return await run_factor_projection_impl(args)
+    result = await run_factor_projection_impl(args)
+    return _attach_requested_by(result, x_user_id, x_user_source)
 
 
 @v1.post("/backtest/momentum")
-async def run_backtest_momentum(args: RunMomentumBacktestArgs) -> dict[str, Any]:
+async def run_backtest_momentum(
+    args: RunMomentumBacktestArgs,
+    x_user_id: str | None = Header(default=None),
+    x_user_source: str | None = Header(default=None),
+) -> dict[str, Any]:
     """Run a momentum FX backtest over Massive daily bars.
 
     Domain-level problems (unconfigured key, invalid pair, insufficient data)
@@ -105,8 +145,13 @@ async def run_backtest_momentum(args: RunMomentumBacktestArgs) -> dict[str, Any]
     same convention as `/v1/projection`. Pydantic validation failures return
     422. On success, `metrics` and `trades` are populated and
     `diagnostics.error` is null.
+
+    Optional `X-User-Id` / `X-User-Source` headers are echoed into
+    `diagnostics.requested_by` for traceability. They are never persisted —
+    AssetHero owns FX run history; numerics stays stateless.
     """
-    return await run_momentum_backtest_impl(args)
+    result = await run_momentum_backtest_impl(args)
+    return _attach_requested_by(result, x_user_id, x_user_source)
 
 
 router.include_router(v1)
