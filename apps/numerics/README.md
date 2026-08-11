@@ -1,10 +1,17 @@
 # macrohero numerics
 
-Stateless FastAPI compute service for FX analytics. Live at `api.macrohero.chat`.
+Stateless FastAPI compute service for FX analytics.
 
-It **computes and returns** — it does not persist. Run history, trade storage, and
-any stateful concerns belong to the consumer (e.g. AssetHero, the TS `apps/api`).
-Market data comes from [Massive](https://massive.dev) daily bars.
+It **computes and returns — it does not persist.** There is **no database, no ORM,
+and no tables** in this service. Run history, trade storage, and any stateful
+concerns belong to the consumer (e.g. AssetHero, which owns FX run history in its
+own `assethero` schema, or the TS `apps/api`). Market data comes from
+[Massive](https://massive.dev) daily bars.
+
+> Deployment note: this service is **internal** (port 8001, reached at
+> `http://numerics:8001` on the Docker network). It is *not* the public
+> `api.macrohero.chat` domain — that is the TypeScript chat api. Give numerics its
+> own domain (and set `NUMERICS_SERVICE_KEY`) only if an external consumer needs it.
 
 ## Running locally
 
@@ -126,6 +133,31 @@ The service can sit on the public internet, so `/v1/*` can be gated by a shared 
 ```bash
 curl -H 'X-Service-Key: <key>' localhost:4003/v1/catalog
 ```
+
+## User traceability (`X-User-Id` / `X-User-Source`)
+
+`POST /v1/backtest/momentum` and `POST /v1/projection` accept two **optional**
+headers so a call can be correlated back to the AssetHero user who triggered it:
+
+| Header | Example |
+|---|---|
+| `X-User-Id` | `f2c1…` (the consumer's user id) |
+| `X-User-Source` | `assethero` |
+
+When either is present they are echoed into `diagnostics.requested_by` and written
+to a structured log line. When both are absent the response is unchanged.
+
+```bash
+curl -X POST localhost:4003/v1/backtest/momentum \
+  -H 'Content-Type: application/json' \
+  -H 'X-User-Id: f2c1-…' -H 'X-User-Source: assethero' \
+  -d '{"pair":"EUR/USD","period":"1y"}'
+# -> diagnostics.requested_by = {"user_id":"f2c1-…","source":"assethero"}
+```
+
+**This is correlation metadata only.** The service still stores nothing — it does
+not write these (or anything else) to any database. AssetHero owns FX run history;
+numerics stays stateless.
 
 ## Coverage gaps
 
